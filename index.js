@@ -34,9 +34,15 @@ const admin = require('./routes/admin');
 app.use('/api/user', authRoutes);
 app.use('/api/admin',validaToken, admin)
 
+app.get('/', (req, res) => {
+    res.json({
+        estado: true,
+        mensaje: 'funciona!'
+    })
+});
+
 // iniciar server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`servidor andando en: ${PORT}`)
 })
-// prueba git
