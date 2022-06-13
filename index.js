@@ -1,8 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyparser = require('body-parser');
-require('dotenv').config()
-
+require('dotenv').config();
 const app = express();
 
 // cors
@@ -32,7 +31,7 @@ const admin = require('./routes/admin');
 
 // route middlewares
 app.use('/api/user', authRoutes);
-app.use('/api/admin',validaToken, admin)
+app.use('/api/admin', validaToken, admin)
 
 app.get('/', (req, res) => {
     res.json({

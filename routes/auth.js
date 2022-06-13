@@ -1,6 +1,6 @@
 const router = require('express').Router(); //esto sirve para generar una ruta en un archivo aparte (auth.js)
 const User = require('../models/Users');
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt');
 const Joi = require('@hapi/joi');
 const jwt = require('jsonwebtoken');
 
@@ -44,9 +44,7 @@ router.post('/login', async (req, res) => {
         mensaje: 'Bienvenido',
         token
     })
-
 })
-
 
 router.post('/register', async (req, res) => { //con post envio una peticion http al servidor (crear)
 
