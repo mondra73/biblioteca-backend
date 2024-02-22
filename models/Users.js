@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const librosSchema = require('../models/libros')
 
 const userSchema = mongoose.Schema({
     name: {
@@ -18,6 +19,19 @@ const userSchema = mongoose.Schema({
         required: true,
         minlength: 6
     },
+    libros: [librosSchema.schema],
+    peliculas: [{
+        fecha: Date,
+        titulo: String,
+        director: String,
+        descripcion: String
+    }],
+    series: [{
+        fecha: Date,
+        titulo: String,
+        director: String,
+        descripcion: String
+    }],
     date: {
         type: Date,
         default: Date.now
