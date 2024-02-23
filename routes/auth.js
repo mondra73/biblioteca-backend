@@ -39,11 +39,11 @@ router.post('/login', async (req, res) => {
         data: {token}
     })
     
-    res.json({
-        error: null,
-        mensaje: 'Bienvenido',
-        token
-    })
+    // res.json({
+    //     error: null,
+    //     mensaje: 'Bienvenido',
+    //     token
+    // })
 })
 
 router.post('/register', async (req, res) => { //con post envio una peticion http al servidor (crear)
