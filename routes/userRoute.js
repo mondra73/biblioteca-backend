@@ -84,11 +84,9 @@ router.post('/carga-peliculas',[validaToken], async (req, res) => {
     }
 });
 
-    // El req.params.id te muestra el id del path ('/:id')
-    // y el req.user te muestra un objeto con tres cosas: { name: 'usuario1', id: '65d8f8186d8442763af1af37', iat: 1708718114 } falta definir de donde sale ese id (porque es distinto al de mongo)
-    // Ruta para eliminar un libro de un usuario
+   
 
-router.delete('/:idUsuario/libros/:idLibro', async (req, res) => {
+router.delete('/:idUsuario/libros/:idLibro', [validaToken], async (req, res) => {
     try {
       const usuarioId = req.params.idUsuario;
       const libroId = req.params.idLibro;
@@ -123,8 +121,79 @@ router.delete('/:idUsuario/libros/:idLibro', async (req, res) => {
     }
   });
     
-  // Ruta para editar un libro de un usuario
-router.put('/:userId/libros/:libroId', async (req, res) => {
+router.delete('/:idUsuario/peliculas/:idPelicula', [validaToken], async (req, res) => {
+    try {
+      const usuarioId = req.params.idUsuario;
+      const peliculaID = req.params.idPelicula;
+  
+      // Buscar al usuario por su ID
+      const usuario = await usuarios.findById(usuarioId);
+  
+      // Verificar si el usuario existe
+      if (!usuario) {
+        return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+      }
+  
+      // Buscar el índice de la pelicula en el array de peliculas del usuario
+      const indicePelicula = usuario.peliculas.findIndex(pelicula => pelicula._id.toString() === peliculaID);
+  
+      // Verificar si la pelicula existe en el array de peliculas del usuario
+      if (indicePelicula === -1) {
+        return res.status(404).json({ mensaje: 'Pelicula no encontrada para este usuario' });
+      }
+  
+      // Eliminar la pelicula del array de peliculas del usuario
+      usuario.peliculas.splice(indicePelicula, 1);
+  
+      // Guardar los cambios en la base de datos
+      await usuario.save();
+  
+      // Respuesta exitosa
+      res.json({ mensaje: 'Pelicula eliminada correctamente' });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ mensaje: 'Error del servidor' });
+    }
+  });
+
+  router.delete('/:idUsuario/series/:idSerie', [validaToken], async (req, res) => {
+    try {
+      const usuarioId = req.params.idUsuario;
+      const serieID = req.params.idSerie;
+  
+      // Buscar al usuario por su ID
+      const usuario = await usuarios.findById(usuarioId);
+  
+      // Verificar si el usuario existe
+      if (!usuario) {
+        return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+      }
+  
+      // Buscar el índice de la serie en el array de series del usuario
+      const indiceSerie = usuario.series.findIndex(series => series._id.toString() === serieID);
+  
+      // Verificar si la serie existe en el array de series del usuario
+      if (indiceSerie === -1) {
+        return res.status(404).json({ mensaje: 'Serie no encontrada para este usuario' });
+      }
+  
+      // Eliminar la serie del array de series del usuario
+      usuario.series.splice(indiceSerie, 1);
+  
+      // Guardar los cambios en la base de datos
+      await usuario.save();
+  
+      // Respuesta exitosa
+      res.json({ mensaje: 'Serie eliminada correctamente' });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ mensaje: 'Error del servidor' });
+    }
+  });
+
+
+  
+router.put('/:userId/libros/:libroId', [validaToken], async (req, res) => {
     const userId = req.params.userId;
     const libroId = req.params.libroId;
     const { fecha, titulo, autor, genero, descripcion } = req.body;
@@ -159,4 +228,71 @@ router.put('/:userId/libros/:libroId', async (req, res) => {
     }
 });
 
+router.put('/:userId/peliculas/:idPelicula', [validaToken], async (req, res) => {
+    const userId = req.params.userId;
+    const peliculaId = req.params.idPelicula;
+    const { fecha, titulo, director, descripcion } = req.body;
+
+    try {
+        // Verificar si el usuario existe
+        const user = await usuarios.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Verificar si la pelicula existe en el array de peliculas del usuario
+        const peliculaIndex = user.peliculas.findIndex(pelicula => pelicula._id.toString() === peliculaId);
+        if (peliculaIndex === -1) {
+            return res.status(404).json({ message: 'Pelicula no encontrada' });
+        }
+
+        // Actualizar los datos del libro
+        if (fecha) user.peliculas[peliculaIndex].fecha = fecha;
+        if (titulo) user.peliculas[peliculaIndex].titulo = titulo;
+        if (director) user.peliculas[peliculaIndex].director = director;
+        if (descripcion) user.peliculas[peliculaIndex].descripcion = descripcion;
+
+        // Guardar el usuario actualizado en la base de datos
+        await user.save();
+
+        res.json({ message: 'Pelicula actualizado correctamente' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+});
+
+router.put('/:userId/series/:idSerie', [validaToken], async (req, res) => {
+    const userId = req.params.userId;
+    const serieId = req.params.idSerie;
+    const { fecha, titulo, director, descripcion } = req.body;
+
+    try {
+        // Verificar si el usuario existe
+        const user = await usuarios.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Verificar si la serie existe en el array de series del usuario
+        const serieIndex = user.series.findIndex(serie => serie._id.toString() === serieId);
+        if (serieIndex === -1) {
+            return res.status(404).json({ message: 'Serie no encontrada' });
+        }
+
+        // Actualizar los datos del libro
+        if (fecha) user.series[serieIndex].fecha = fecha;
+        if (titulo) user.series[serieIndex].titulo = titulo;
+        if (director) user.series[serieIndex].director = director;
+        if (descripcion) user.series[serieIndex].descripcion = descripcion;
+
+        // Guardar el usuario actualizado en la base de datos
+        await user.save();
+
+        res.json({ message: 'Serie actualizada correctamente' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+});
 module.exports = router
