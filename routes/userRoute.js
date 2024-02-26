@@ -84,25 +84,78 @@ router.post('/carga-peliculas',[validaToken], async (req, res) => {
     }
 });
 
-router.delete('/:id',[validaToken], async (req, res) => {
-    const id = req.params.id;
-    console.log('Id del libro/serie/pelicula a eliminar: ', req.body.id)
-    console.log('id del usuario: ', id)
+    // El req.params.id te muestra el id del path ('/:id')
+    // y el req.user te muestra un objeto con tres cosas: { name: 'usuario1', id: '65d8f8186d8442763af1af37', iat: 1708718114 } falta definir de donde sale ese id (porque es distinto al de mongo)
+    // Ruta para eliminar un libro de un usuario
+
+router.delete('/:idUsuario/libros/:idLibro', async (req, res) => {
     try {
-        const elemento = await usuarios.findByIdAndDelete({ _id: req.body.id})
-        if (elemento){
-            res.json({
-                estado: true,
-                mensaje: 'eliminado!'
-            })
-        }else {
-            res.json({
-                estado: true,
-                mensaje: 'No se pudo eliminar!' 
-            })
-        }
+      const usuarioId = req.params.idUsuario;
+      const libroId = req.params.idLibro;
+  
+      // Buscar al usuario por su ID
+      const usuario = await usuarios.findById(usuarioId);
+  
+      // Verificar si el usuario existe
+      if (!usuario) {
+        return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+      }
+  
+      // Buscar el índice del libro en el array de libros del usuario
+      const indiceLibro = usuario.libros.findIndex(libro => libro._id.toString() === libroId);
+  
+      // Verificar si el libro existe en el array de libros del usuario
+      if (indiceLibro === -1) {
+        return res.status(404).json({ mensaje: 'Libro no encontrado para este usuario' });
+      }
+  
+      // Eliminar el libro del array de libros del usuario
+      usuario.libros.splice(indiceLibro, 1);
+  
+      // Guardar los cambios en la base de datos
+      await usuario.save();
+  
+      // Respuesta exitosa
+      res.json({ mensaje: 'Libro eliminado correctamente' });
     } catch (error) {
-        console.log(error)
+      console.error(error);
+      res.status(500).json({ mensaje: 'Error del servidor' });
+    }
+  });
+    
+  // Ruta para editar un libro de un usuario
+router.put('/:userId/libros/:libroId', async (req, res) => {
+    const userId = req.params.userId;
+    const libroId = req.params.libroId;
+    const { fecha, titulo, autor, genero, descripcion } = req.body;
+
+    try {
+        // Verificar si el usuario existe
+        const user = await usuarios.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Verificar si el libro existe en el array de libros del usuario
+        const libroIndex = user.libros.findIndex(libro => libro._id.toString() === libroId);
+        if (libroIndex === -1) {
+            return res.status(404).json({ message: 'Libro no encontrado' });
+        }
+
+        // Actualizar los datos del libro
+        if (fecha) user.libros[libroIndex].fecha = fecha;
+        if (titulo) user.libros[libroIndex].titulo = titulo;
+        if (autor) user.libros[libroIndex].autor = autor;
+        if (genero) user.libros[libroIndex].genero = genero;
+        if (descripcion) user.libros[libroIndex].descripcion = descripcion;
+
+        // Guardar el usuario actualizado en la base de datos
+        await user.save();
+
+        res.json({ message: 'Libro actualizado correctamente' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error interno del servidor' });
     }
 });
 
