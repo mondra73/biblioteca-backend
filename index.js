@@ -28,7 +28,7 @@ mongoose.connect(uri,
 const authRoutes = require('./routes/auth');
 const validaToken = require('./routes/validate-token');
 const admin = require('./routes/admin');
-const rutas = require('./routes/userRoute')
+const rutas = require('./routes/librosRoute')
 
 // route middlewares
 app.use('/api/user', authRoutes);
