@@ -7,7 +7,7 @@ const usuarios = require('../models/Users');
 const Libro = require('../models/libros');
 
 
-router.get('/',[validaToken], async (req, res) => {
+router.get('/libros',[validaToken], async (req, res) => {
     // console.log(req.user)
     try {
         const usuarioID = await usuarios.findOne({_id: req.user.id});
