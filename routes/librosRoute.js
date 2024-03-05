@@ -23,8 +23,8 @@ router.get('/libros',[validaToken], async (req, res) => {
     }
 });
 
-router.get('/:userId/libro/:libroId', [validaToken], async (req, res) => {
-    const userId = req.params.userId;
+router.get('/libro/:libroId', [validaToken], async (req, res) => {
+    const userId = req.user.id
     const libroId = req.params.libroId;
     const { fecha, titulo, autor, genero, descripcion } = req.body;
 
@@ -68,9 +68,9 @@ router.post('/carga-libros',[validaToken], async (req, res) => {
     }
 });
 
-router.delete('/:idUsuario/libros/:idLibro', [validaToken], async (req, res) => {
+router.delete('/libro/:idLibro', [validaToken], async (req, res) => {
     try {
-      const usuarioId = req.params.idUsuario;
+      const usuarioId = req.user.id;
       const libroId = req.params.idLibro;
   
       // Buscar al usuario por su ID
@@ -103,8 +103,8 @@ router.delete('/:idUsuario/libros/:idLibro', [validaToken], async (req, res) => 
     }
   });
 
-  router.put('/:userId/libros/:libroId', [validaToken], async (req, res) => {
-    const userId = req.params.userId;
+  router.put('/libro/:libroId', [validaToken], async (req, res) => {
+    const userId = req.user.id
     const libroId = req.params.libroId;
     const { fecha, titulo, autor, genero, descripcion } = req.body;
 
