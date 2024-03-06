@@ -49,38 +49,67 @@ router.get('/libro/:libroId', [validaToken], async (req, res) => {
 });
 
 // get por titulo del libro
-router.get('/libro/buscar/titulo/:titulo', [validaToken], async (req, res) => {
-    const userId = req.user.id
-    const titulo = req.params.titulo.toLowerCase().replace(/_/g, ' '); // Convertir el título proporcionado en minúsculas y reemplazar guiones bajos por espacios;
+// opcion JUANI: y en el backend vas a hacer libros.find(a => a.titulo.includes(texto) || a.autor.includes(texto))
+// router.get('/libro/buscar/titulo/:titulo', [validaToken], async (req, res) => {
+//     const userId = req.user.id
+//     const titulo = req.params.titulo.toLowerCase().replace(/_/g, ' '); // Convertir el título proporcionado en minúsculas y reemplazar guiones bajos por espacios;
 
-    try {
-        // Verificar si el usuario existe
-        const user = await usuarios.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
-        }
+//     try {
+//         // Verificar si el usuario existe
+//         const user = await usuarios.findById(userId);
+//         if (!user) {
+//             return res.status(404).json({ message: 'Usuario no encontrado' });
+//         }
 
-    // Buscar el libro por su título (ignorando mayúsculas y minúsculas) de manera parcial
+//     // Buscar el libro por su título (ignorando mayúsculas y minúsculas) de manera parcial
 
-            const regex = new RegExp(titulo, 'i'); // 'i' indica que la búsqueda es insensible a mayúsculas y minúsculas
-            const libro = user.libros.filter(libro => regex.test(libro.titulo.toLowerCase()));
-        if (libro.length === 0) {
-            return res.status(404).json({ message: 'Libro no encontrado' });
-        }
+//             const regex = new RegExp(titulo, 'i'); // 'i' indica que la búsqueda es insensible a mayúsculas y minúsculas
+//             const libro = user.libros.filter(libro => regex.test(libro.titulo.toLowerCase()));
+//         if (libro.length === 0) {
+//             return res.status(404).json({ message: 'Libro no encontrado' });
+//         }
 
-        // Si se encuentra el libro, devolverlo como respuesta
-        res.status(200).json(libro);
+//         // Si se encuentra el libro, devolverlo como respuesta
+//         res.status(200).json(libro);
 
-    } catch (error){
-        console.log(error);
-        res.status(500).json({ message: 'Error interno del servidor' });
-    }
-});
+//     } catch (error){
+//         console.log(error);
+//         res.status(500).json({ message: 'Error interno del servidor' });
+//     }
+// });
 
 // get por autor del libro
-router.get('/libro/buscar/autor/:autor', [validaToken], async (req, res) => {
-    const userId = req.user.id
-    const autor = req.params.autor.toLowerCase().replace(/_/g, ' '); // Convertir el título proporcionado en minúsculas y reemplazar guiones bajos por espacios;
+// router.get('/libro/buscar/autor/:autor', [validaToken], async (req, res) => {
+//     const userId = req.user.id
+//     const autor = req.params.autor.toLowerCase().replace(/_/g, ' '); // Convertir el título proporcionado en minúsculas y reemplazar guiones bajos por espacios;
+
+//     try {
+//         // Verificar si el usuario existe
+//         const user = await usuarios.findById(userId);
+//         if (!user) {
+//             return res.status(404).json({ message: 'Usuario no encontrado' });
+//         }
+
+//     // Buscar el libro por su autor (ignorando mayúsculas y minúsculas) de manera parcial
+
+//             const regex = new RegExp(autor, 'i'); // 'i' indica que la búsqueda es insensible a mayúsculas y minúsculas
+//             const libro = user.libros.filter(libro => regex.test(libro.autor.toLowerCase()));
+//         if (libro.length === 0) {
+//             return res.status(404).json({ message: 'Autor no encontrado' });
+//         }
+
+//         // Si se encuentra el libro, devolverlo como respuesta
+//         res.status(200).json(libro);
+
+//     } catch (error){
+//         console.log(error);
+//         res.status(500).json({ message: 'Error interno del servidor' });
+//     }
+// });
+
+router.get('/libro/buscar/:texto', [validaToken], async (req, res) => {
+    const userId = req.user.id;
+    const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
 
     try {
         // Verificar si el usuario existe
@@ -89,18 +118,19 @@ router.get('/libro/buscar/autor/:autor', [validaToken], async (req, res) => {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-    // Buscar el libro por su autor (ignorando mayúsculas y minúsculas) de manera parcial
+        // Buscar el libro por su título o autor (ignorando mayúsculas y minúsculas) de manera parcial
+        const librosEncontrados = user.libros.filter(libro => {
+            return libro.titulo.toLowerCase().includes(texto) || libro.autor.toLowerCase().includes(texto);
+        });
 
-            const regex = new RegExp(autor, 'i'); // 'i' indica que la búsqueda es insensible a mayúsculas y minúsculas
-            const libro = user.libros.filter(libro => regex.test(libro.autor.toLowerCase()));
-        if (libro.length === 0) {
-            return res.status(404).json({ message: 'Autor no encontrado' });
+        if (librosEncontrados.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron libros con ese título o autor' });
         }
 
-        // Si se encuentra el libro, devolverlo como respuesta
-        res.status(200).json(libro);
+        // Si se encuentran libros, devolverlos como respuesta
+        res.status(200).json(librosEncontrados);
 
-    } catch (error){
+    } catch (error) {
         console.log(error);
         res.status(500).json({ message: 'Error interno del servidor' });
     }
