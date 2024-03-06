@@ -28,12 +28,17 @@ mongoose.connect(uri,
 const authRoutes = require('./routes/auth');
 const validaToken = require('./routes/validate-token');
 const admin = require('./routes/admin');
-const rutas = require('./routes/librosRoute')
+const rutasLibros = require('./routes/librosRoute');
+const rutasSeries = require('./routes/seriesRoute');
+const rutasPeliculas = require('./routes/peliculasRoute');
 
 // route middlewares
 app.use('/api/user', authRoutes);
 app.use('/api/admin', validaToken, admin)
-app.use('/api/admin/user', rutas)
+app.use('/api/admin/user', rutasLibros)
+app.use('/api/admin/user', rutasSeries)
+app.use('/api/admin/user', rutasPeliculas)
+
 
 app.get('/', (req, res) => {
     res.json({
@@ -42,12 +47,6 @@ app.get('/', (req, res) => {
     })
 });
 
-// app.get('/protegida', (req, res) => {
-//     res.json({
-//         estado: true,
-//         mensaje: 'protegida!'
-//     })
-// })
 
 // iniciar server
 const PORT = process.env.PORT || 3000;
