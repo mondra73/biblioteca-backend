@@ -22,4 +22,118 @@ router.get('/peliculas',[validaToken], async (req, res) => {
     }
 });
 
+router.get('/pelicula/:peliculaId', [validaToken], async (req, res) => {
+    const userId = req.user.id
+    const peliculaId = req.params.peliculaId;
+    const { fecha, titulo, director, descripcion } = req.body;
+
+    try {
+        // Verificar si el usuario existe
+        const user = await usuarios.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const pelicula = user.peliculas.find(pelicula => pelicula._id.toString() === peliculaId);
+        if (!pelicula) {
+            return res.status(404).json({ error: true, mensaje: 'Pelicula no encontrada' });
+        }
+        // Devolver la pelicula encontrado en la respuesta
+        res.json(pelicula);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+});
+
+router.post('/carga-peliculas',[validaToken], async (req, res) => {
+    try {
+        const usuarioDB = await usuarios.findOne({_id: req.user.id});
+        const pelicula = new Pelicula(req.body);
+        usuarioDB.peliculas.push(pelicula);
+        await usuarioDB.save();
+        
+        res.json('200', {
+            mensaje: 'Pelicula cargada correctamente'
+        })
+
+    } catch (error) {
+        console.log(error)
+        res.json('400', {
+            error: true,
+            mensaje: error
+        })
+    }
+});
+
+router.put('/pelicula/:peliculaId', [validaToken], async (req, res) => {
+    const userId = req.user.id
+    const peliculaId = req.params.peliculaId;
+    const { fecha, titulo, director, descripcion } = req.body;
+
+    try {
+        // Verificar si el usuario existe
+        const user = await usuarios.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Verificar si la pelicula existe en el array de peliculas del usuario
+        const peliculaIndex = user.peliculas.findIndex(pelicula => pelicula._id.toString() === peliculaId);
+        if (peliculaIndex === -1) {
+            return res.status(404).json({ message: 'pelicula no encontrado' });
+        }
+
+        // Actualizar los datos del pelicula
+        if (fecha) user.peliculas[peliculaIndex].fecha = fecha;
+        if (titulo) user.peliculas[peliculaIndex].titulo = titulo;
+        if (director) user.peliculas[peliculaIndex].director = director;
+        if (descripcion) user.peliculas[peliculaIndex].descripcion = descripcion;
+
+        // Guardar el usuario actualizado en la base de datos
+        await user.save();
+
+        res.json({ message: 'pelicula actualizada correctamente' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+});
+
+router.delete('/pelicula/:idPelicula', [validaToken], async (req, res) => {
+    try {
+      const usuarioId = req.user.id;
+      const peliculaId = req.params.idPelicula;
+  
+      // Buscar al usuario por su ID
+      const usuario = await usuarios.findById(usuarioId);
+  
+      // Verificar si el usuario existe
+      if (!usuario) {
+        return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+      }
+  
+      // Buscar el índice de la pelicula en el array de peliculas del usuario
+      const indicePelicula = usuario.peliculas.findIndex(pelicula => pelicula._id.toString() === peliculaId);
+  
+      // Verificar si e la pelicula existe en el array de peliculas del usuario
+      if (indicePelicula === -1) {
+        return res.status(404).json({ mensaje: 'pelicula no encontrada para este usuario' });
+      }
+  
+      // Eliminar el pelicula del array de peliculas del usuario
+      usuario.peliculas.splice(indicePelicula, 1);
+  
+      // Guardar los cambios en la base de datos
+      await usuario.save();
+  
+      // Respuesta exitosa
+      res.json({ mensaje: 'Pelicula eliminada correctamente' });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ mensaje: 'Error del servidor' });
+    }
+});
+
+
 module.exports = router
