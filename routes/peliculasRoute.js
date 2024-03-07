@@ -46,6 +46,37 @@ router.get('/pelicula/:peliculaId', [validaToken], async (req, res) => {
     }
 });
 
+// get series buscar
+
+router.get('/pelicula/buscar/:texto', [validaToken], async (req, res) => {
+    const userId = req.user.id;
+    const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
+
+    try {
+        // Verificar si el usuario existe
+        const user = await usuarios.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Buscar la pelicula por su título o director (ignorando mayúsculas y minúsculas) de manera parcial
+        const peliculasEncontradas = user.peliculas.filter(pelicula => {
+            return pelicula.titulo.toLowerCase().includes(texto) || pelicula.director.toLowerCase().includes(texto);
+        });
+
+        if (peliculasEncontradas.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron peliculas con ese título o director' });
+        }
+
+        // Si se encuentran peliculas, devolverlos como respuesta
+        res.status(200).json(peliculasEncontradas);
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+});
+
 router.post('/carga-peliculas',[validaToken], async (req, res) => {
     try {
         const usuarioDB = await usuarios.findOne({_id: req.user.id});
@@ -63,40 +94,6 @@ router.post('/carga-peliculas',[validaToken], async (req, res) => {
             error: true,
             mensaje: error
         })
-    }
-});
-
-router.put('/pelicula/:peliculaId', [validaToken], async (req, res) => {
-    const userId = req.user.id
-    const peliculaId = req.params.peliculaId;
-    const { fecha, titulo, director, descripcion } = req.body;
-
-    try {
-        // Verificar si el usuario existe
-        const user = await usuarios.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
-        }
-
-        // Verificar si la pelicula existe en el array de peliculas del usuario
-        const peliculaIndex = user.peliculas.findIndex(pelicula => pelicula._id.toString() === peliculaId);
-        if (peliculaIndex === -1) {
-            return res.status(404).json({ message: 'pelicula no encontrado' });
-        }
-
-        // Actualizar los datos del pelicula
-        if (fecha) user.peliculas[peliculaIndex].fecha = fecha;
-        if (titulo) user.peliculas[peliculaIndex].titulo = titulo;
-        if (director) user.peliculas[peliculaIndex].director = director;
-        if (descripcion) user.peliculas[peliculaIndex].descripcion = descripcion;
-
-        // Guardar el usuario actualizado en la base de datos
-        await user.save();
-
-        res.json({ message: 'pelicula actualizada correctamente' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error interno del servidor' });
     }
 });
 
@@ -135,5 +132,38 @@ router.delete('/pelicula/:idPelicula', [validaToken], async (req, res) => {
     }
 });
 
+router.put('/pelicula/:peliculaId', [validaToken], async (req, res) => {
+    const userId = req.user.id
+    const peliculaId = req.params.peliculaId;
+    const { fecha, titulo, director, descripcion } = req.body;
+
+    try {
+        // Verificar si el usuario existe
+        const user = await usuarios.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Verificar si la pelicula existe en el array de peliculas del usuario
+        const peliculaIndex = user.peliculas.findIndex(pelicula => pelicula._id.toString() === peliculaId);
+        if (peliculaIndex === -1) {
+            return res.status(404).json({ message: 'pelicula no encontrado' });
+        }
+
+        // Actualizar los datos del pelicula
+        if (fecha) user.peliculas[peliculaIndex].fecha = fecha;
+        if (titulo) user.peliculas[peliculaIndex].titulo = titulo;
+        if (director) user.peliculas[peliculaIndex].director = director;
+        if (descripcion) user.peliculas[peliculaIndex].descripcion = descripcion;
+
+        // Guardar el usuario actualizado en la base de datos
+        await user.save();
+
+        res.json({ message: 'pelicula actualizada correctamente' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+});
 
 module.exports = router
