@@ -31,13 +31,15 @@ const admin = require('./routes/admin');
 const rutasLibros = require('./routes/librosRoute');
 const rutasSeries = require('./routes/seriesRoute');
 const rutasPeliculas = require('./routes/peliculasRoute');
+const rutasUser = require('./routes/userRoute');
 
 // route middlewares
 app.use('/api/user', authRoutes);
-app.use('/api/admin', validaToken, admin)
-app.use('/api/admin/user', rutasLibros)
-app.use('/api/admin/user', rutasSeries)
-app.use('/api/admin/user', rutasPeliculas)
+app.use('/api/admin', validaToken, admin);
+app.use('/api/admin/user', rutasLibros);
+app.use('/api/admin/user', rutasSeries);
+app.use('/api/admin/user', rutasPeliculas);
+app.use('/api/admin/user', rutasUser);
 
 
 app.get('/', (req, res) => {
