@@ -21,10 +21,10 @@ router.post('/login', async (req, res) => {
     if (error) return res.status(400).json({ error: error.details[0].message })
     
     const user = await User.findOne({ email: req.body.email });
-    if (!user) return res.status(400).json({ error: true, mensaje: 'Email no registrado'});
+    if (!user) return res.status(400).json({ error: true, mensaje: 'Credenciales invalidas'});
 
     const validPassword = await bcrypt.compare(req.body.password, user.password);
-    if (!validPassword) return res.status(400).json({ error: true, mensaje: 'Contraseña incorrecta' })
+    if (!validPassword) return res.status(400).json({ error: true, mensaje: 'Credenciales invalidas' })
 
     // Nota: En los mensajes del mail y contraseñas incorrectos, poner credenciales invalidas. Es para no darle pistas al usuario en que se esta equivocando
 
@@ -40,11 +40,6 @@ router.post('/login', async (req, res) => {
         name: user.name
     })
     
-    // res.json({
-    //     error: null,
-    //     mensaje: 'Bienvenido',
-    //     token
-    // })
 })
 
 router.post('/register', async (req, res) => { //con post envio una peticion http al servidor (crear)

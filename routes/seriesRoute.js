@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { required } = require('@hapi/joi');
 const validaToken = require('./validate-token');
 const jwt = require('jsonwebtoken')
+const moment = require('moment');
 
 const usuarios = require('../models/Users');
 const Serie = require('../models/series');
@@ -46,8 +47,6 @@ router.get('/serie/:serieId', [validaToken], async (req, res) => {
     }
 });
 
-// get series buscar
-
 router.get('/serie/buscar/:texto', [validaToken], async (req, res) => {
     const userId = req.user.id;
     const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
@@ -61,7 +60,7 @@ router.get('/serie/buscar/:texto', [validaToken], async (req, res) => {
 
         // Buscar la serie por su título o director (ignorando mayúsculas y minúsculas) de manera parcial
         const seriesEncontradas = user.series.filter(serie => {
-            return serie.titulo.toLowerCase().includes(texto) || serie.director.toLowerCase().includes(texto);
+            return serie.titulo.toLowerCase().includes(texto) || serie.director.toLowerCase().includes(texto) || serie.descripcion.toLowerCase().includes(texto);
         });
 
         if (seriesEncontradas.length === 0) {
@@ -77,12 +76,44 @@ router.get('/serie/buscar/:texto', [validaToken], async (req, res) => {
     }
 });
 
-
 router.post('/carga-series',[validaToken], async (req, res) => {
     try {
+        // Verificar si se proporciona el título de la serie
+        if (!req.body.titulo) {
+            return res.status(400).json({
+                error: true,
+                mensaje: 'El campo título es obligatorio.'
+            });
+        }
+
         const usuarioDB = await usuarios.findOne({_id: req.user.id});
-        const serie = new Serie(req.body);
+
+        // Obtener la fecha actual
+        const fechaActual = moment().startOf('day');
+
+        // Convertir la fecha de la serie a un objeto Moment
+        const fechaSerie = moment(req.body.fecha);
+
+        // Verificar si la fecha de la serie es posterior al día actual
+        if (fechaSerie.isAfter(fechaActual)) {
+            return res.status(400).json({
+                error: true,
+                mensaje: 'La fecha de la serie no puede ser posterior al día actual.'
+            });
+        }
+
+        // Crear nueva Serie
+        const serie = new Serie({
+            fecha: fechaSerie.toDate(),
+            titulo: req.body.titulo,
+            director: req.body.director,
+            descripcion: req.body.descripcion
+        });
+
+        // Agregar la serie al array de series del usuario
         usuarioDB.series.push(serie);
+
+         // Guardar los cambios en la base de datos
         await usuarioDB.save();
         
         res.json('200', {
@@ -149,6 +180,20 @@ router.put('/serie/:serieId', [validaToken], async (req, res) => {
         const serieIndex = user.series.findIndex(serie => serie._id.toString() === serieId);
         if (serieIndex === -1) {
             return res.status(404).json({ message: 'serie no encontrado' });
+        }
+
+        // Verificar si se proporciona el título de la serie
+        if (!titulo) {
+            return res.status(400).json({ message: 'El campo título es obligatorio para editar una serie' });
+        }
+
+        // Verificar si la fecha de la serie es posterior al día actual
+        if (fecha) {
+            const fechaActual = moment().startOf('day');
+            const fechaSerie = moment(fecha);
+            if (fechaSerie.isAfter(fechaActual)) {
+                return res.status(400).json({ message: 'La fecha de la serie no puede ser posterior al día actual' });
+            }
         }
 
         // Actualizar los datos de la serie

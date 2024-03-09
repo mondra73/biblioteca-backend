@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { required } = require('@hapi/joi');
 const validaToken = require('./validate-token');
 const jwt = require('jsonwebtoken')
+const moment = require('moment');
 
 const usuarios = require('../models/Users');
 const Pelicula = require('../models/peliculas');
@@ -46,8 +47,6 @@ router.get('/pelicula/:peliculaId', [validaToken], async (req, res) => {
     }
 });
 
-// get series buscar
-
 router.get('/pelicula/buscar/:texto', [validaToken], async (req, res) => {
     const userId = req.user.id;
     const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
@@ -61,7 +60,7 @@ router.get('/pelicula/buscar/:texto', [validaToken], async (req, res) => {
 
         // Buscar la pelicula por su título o director (ignorando mayúsculas y minúsculas) de manera parcial
         const peliculasEncontradas = user.peliculas.filter(pelicula => {
-            return pelicula.titulo.toLowerCase().includes(texto) || pelicula.director.toLowerCase().includes(texto);
+            return pelicula.titulo.toLowerCase().includes(texto) || pelicula.director.toLowerCase().includes(texto) || pelicula.descripcion.toLowerCase().includes(texto);
         });
 
         if (peliculasEncontradas.length === 0) {
@@ -79,10 +78,44 @@ router.get('/pelicula/buscar/:texto', [validaToken], async (req, res) => {
 
 router.post('/carga-peliculas',[validaToken], async (req, res) => {
     try {
+
+        // Verificar si se proporciona el título de la pelicula
+        if (!req.body.titulo) {
+            return res.status(400).json({
+                error: true,
+                mensaje: 'El campo título es obligatorio.'
+            });
+        }
+
         const usuarioDB = await usuarios.findOne({_id: req.user.id});
-        const pelicula = new Pelicula(req.body);
+
+        // Obtener la fecha actual
+        const fechaActual = moment().startOf('day');
+
+        // Convertir la fecha de la pelicula a un objeto Moment
+        const fechaPelicula = moment(req.body.fecha);
+
+        // Verificar si la fecha de la pelicula es posterior al día actual
+        if (fechaPelicula.isAfter(fechaActual)) {
+            return res.status(400).json({
+                error: true,
+                mensaje: 'La fecha de la pelicula no puede ser posterior al día actual.'
+            });
+        }
+
+        // Crear nuev Pelicula
+        const pelicula = new Pelicula({
+            fecha: fechaPelicula.toDate(),
+            titulo: req.body.titulo,
+            director: req.body.director,
+            descripcion: req.body.descripcion
+        });
+        
+        // Agregar la pelicula al array de peliculas del usuario
         usuarioDB.peliculas.push(pelicula);
-        await usuarioDB.save();
+
+         // Guardar los cambios en la base de datos
+         await usuarioDB.save();
         
         res.json('200', {
             mensaje: 'Pelicula cargada correctamente'
@@ -92,7 +125,7 @@ router.post('/carga-peliculas',[validaToken], async (req, res) => {
         console.log(error)
         res.json('400', {
             error: true,
-            mensaje: error
+            mensaje: 'ocurre un error en el server: ', error
         })
     }
 });
@@ -148,6 +181,20 @@ router.put('/pelicula/:peliculaId', [validaToken], async (req, res) => {
         const peliculaIndex = user.peliculas.findIndex(pelicula => pelicula._id.toString() === peliculaId);
         if (peliculaIndex === -1) {
             return res.status(404).json({ message: 'pelicula no encontrado' });
+        }
+
+        // Verificar si se proporciona el título de la pelicula
+        if (!titulo) {
+            return res.status(400).json({ message: 'El campo título es obligatorio para editar una pelicula' });
+        }
+
+        // Verificar si la fecha de la pelicula es posterior al día actual
+        if (fecha) {
+            const fechaActual = moment().startOf('day');
+            const fechaPelicula = moment(fecha);
+            if (fechaPelicula.isAfter(fechaActual)) {
+                return res.status(400).json({ message: 'La fecha de la pelicula no puede ser posterior al día actual' });
+            }
         }
 
         // Actualizar los datos del pelicula

@@ -2,6 +2,8 @@ const router = require('express').Router();
 const { required } = require('@hapi/joi');
 const validaToken = require('./validate-token');
 const jwt = require('jsonwebtoken')
+const moment = require('moment');
+
 
 const usuarios = require('../models/Users');
 const Libro = require('../models/libros');
@@ -23,7 +25,7 @@ router.get('/libros',[validaToken], async (req, res) => {
     }
 });
 
-// get por id del libro
+// Busca libro cuando clickeas. Para despues editarlo o eliminarlo
 router.get('/libro/:libroId', [validaToken], async (req, res) => {
     const userId = req.user.id
     const libroId = req.params.libroId;
@@ -61,7 +63,7 @@ router.get('/libro/buscar/:texto', [validaToken], async (req, res) => {
 
         // Buscar el libro por su título o autor (ignorando mayúsculas y minúsculas) de manera parcial
         const librosEncontrados = user.libros.filter(libro => {
-            return libro.titulo.toLowerCase().includes(texto) || libro.autor.toLowerCase().includes(texto);
+            return libro.titulo.toLowerCase().includes(texto) || libro.autor.toLowerCase().includes(texto) || libro.genero.toLowerCase().includes(texto) || libro.descripcion.toLowerCase().includes(texto);
         });
 
         if (librosEncontrados.length === 0) {
@@ -79,10 +81,44 @@ router.get('/libro/buscar/:texto', [validaToken], async (req, res) => {
 
 router.post('/carga-libros',[validaToken], async (req, res) => {
     try {
+        // Verificar si se proporciona el título del libro
+        if (!req.body.titulo) {
+            return res.status(400).json({
+                error: true,
+                mensaje: 'El campo título es obligatorio.'
+            });
+        }
+
         const usuarioDB = await usuarios.findOne({_id: req.user.id});
-        const libro = new Libro(req.body);
+
+        // Obtener la fecha actual
+        const fechaActual = moment().startOf('day');
+
+        // Convertir la fecha del libro a un objeto Moment
+        const fechaLibro = moment(req.body.fecha);
+
+        // Verificar si la fecha del libro es posterior al día actual
+        if (fechaLibro.isAfter(fechaActual)) {
+            return res.status(400).json({
+                error: true,
+                mensaje: 'La fecha del libro no puede ser posterior al día actual.'
+            });
+        }
+
+        // Crear el nuevo libro
+        const libro = new Libro({
+            fecha: fechaLibro.toDate(),
+            titulo: req.body.titulo,
+            autor: req.body.autor,
+            genero: req.body.genero,
+            descripcion: req.body.descripcion
+        });
+
+        // Agregar el libro al array de libros del usuario
         usuarioDB.libros.push(libro);
-        await usuarioDB.save();
+
+         // Guardar los cambios en la base de datos
+         await usuarioDB.save();
         
         res.json('200', {
             mensaje: 'Libro cargado correctamente'
@@ -92,7 +128,7 @@ router.post('/carga-libros',[validaToken], async (req, res) => {
         console.log(error)
         res.json('400', {
             error: true,
-            mensaje: error
+            mensaje: 'ocurre un error en el server: ', error
         })
     }
 });
@@ -148,6 +184,20 @@ router.put('/libro/:libroId', [validaToken], async (req, res) => {
         const libroIndex = user.libros.findIndex(libro => libro._id.toString() === libroId);
         if (libroIndex === -1) {
             return res.status(404).json({ message: 'Libro no encontrado' });
+        }
+
+        // Verificar si se proporciona el título del libro
+        if (!titulo) {
+            return res.status(400).json({ message: 'El campo título es obligatorio para editar un libro' });
+        }
+
+        // Verificar si la fecha del libro es posterior al día actual
+        if (fecha) {
+            const fechaActual = moment().startOf('day');
+            const fechaLibro = moment(fecha);
+            if (fechaLibro.isAfter(fechaActual)) {
+                return res.status(400).json({ message: 'La fecha del libro no puede ser posterior al día actual' });
+            }
         }
 
         // Actualizar los datos del libro
