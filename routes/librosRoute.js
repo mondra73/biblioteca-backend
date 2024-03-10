@@ -1,13 +1,22 @@
 const router = require('express').Router();
-const { required } = require('@hapi/joi');
 const validaToken = require('./validate-token');
-const jwt = require('jsonwebtoken')
 const moment = require('moment');
-
+const Joi = require('@hapi/joi');
 
 const usuarios = require('../models/Users');
 const Libro = require('../models/libros');
 
+const schemaCargaLibros = Joi.object({
+    fecha: Joi.date().required().messages({
+        'any.required': 'La fecha es obligatoria.'
+    }),
+    titulo: Joi.string().required().messages({
+        'any.required': 'El título es obligatorio.'
+    }),
+    autor: Joi.string(),
+    genero: Joi.string(),
+    descripcion: Joi.string()
+});
 
 router.get('/libros',[validaToken], async (req, res) => {
     // console.log(req.user)
@@ -79,25 +88,21 @@ router.get('/libro/buscar/:texto', [validaToken], async (req, res) => {
     }
 });
 
-router.post('/carga-libros',[validaToken], async (req, res) => {
+router.post('/carga-libros', [validaToken], async (req, res) => {
     try {
-        // Verificar si se proporciona el título del libro
-        if (!req.body.titulo) {
+        // Validar los datos del cuerpo de la solicitud
+        const { error } = schemaCargaLibros.validate(req.body);
+        if (error) {
             return res.status(400).json({
                 error: true,
-                mensaje: 'El campo título es obligatorio.'
+                mensaje: error.details[0].message
             });
         }
 
-        const usuarioDB = await usuarios.findOne({_id: req.user.id});
-
-        // Obtener la fecha actual
+        const usuarioDB = await usuarios.findOne({ _id: req.user.id });
         const fechaActual = moment().startOf('day');
-
-        // Convertir la fecha del libro a un objeto Moment
         const fechaLibro = moment(req.body.fecha);
 
-        // Verificar si la fecha del libro es posterior al día actual
         if (fechaLibro.isAfter(fechaActual)) {
             return res.status(400).json({
                 error: true,
@@ -105,7 +110,6 @@ router.post('/carga-libros',[validaToken], async (req, res) => {
             });
         }
 
-        // Crear el nuevo libro
         const libro = new Libro({
             fecha: fechaLibro.toDate(),
             titulo: req.body.titulo,
@@ -114,22 +118,19 @@ router.post('/carga-libros',[validaToken], async (req, res) => {
             descripcion: req.body.descripcion
         });
 
-        // Agregar el libro al array de libros del usuario
         usuarioDB.libros.push(libro);
+        await usuarioDB.save();
 
-         // Guardar los cambios en la base de datos
-         await usuarioDB.save();
-        
-        res.json('200', {
+        res.status(200).json({
             mensaje: 'Libro cargado correctamente'
-        })
+        });
 
     } catch (error) {
-        console.log(error)
-        res.json('400', {
+        console.log(error);
+        res.status(400).json({
             error: true,
-            mensaje: 'ocurre un error en el server: ', error
-        })
+            mensaje: 'ocurre un error en el servidor: ' + error
+        });
     }
 });
 

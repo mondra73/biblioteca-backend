@@ -1,11 +1,21 @@
 const router = require('express').Router();
-const { required } = require('@hapi/joi');
 const validaToken = require('./validate-token');
-const jwt = require('jsonwebtoken')
 const moment = require('moment');
+const Joi = require('@hapi/joi');
 
 const usuarios = require('../models/Users');
 const Pelicula = require('../models/peliculas');
+
+const schemaCargaPeliculas = Joi.object({
+    fecha: Joi.date().required().messages({
+        'any.required': 'La fecha es obligatoria.'
+    }),
+    titulo: Joi.string().required().messages({
+        'any.required': 'El título es obligatorio.'
+    }),
+    director: Joi.string(),
+    descripcion: Joi.string()
+});
 
 router.get('/peliculas',[validaToken], async (req, res) => {
     // console.log(req.user)
@@ -78,12 +88,12 @@ router.get('/pelicula/buscar/:texto', [validaToken], async (req, res) => {
 
 router.post('/carga-peliculas',[validaToken], async (req, res) => {
     try {
-
-        // Verificar si se proporciona el título de la pelicula
-        if (!req.body.titulo) {
+        // Validar los datos del cuerpo de la solicitud
+        const { error } = schemaCargaPeliculas.validate(req.body);
+        if (error) {
             return res.status(400).json({
                 error: true,
-                mensaje: 'El campo título es obligatorio.'
+                mensaje: error.details[0].message
             });
         }
 

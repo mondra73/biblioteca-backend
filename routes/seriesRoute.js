@@ -1,11 +1,21 @@
 const router = require('express').Router();
-const { required } = require('@hapi/joi');
 const validaToken = require('./validate-token');
-const jwt = require('jsonwebtoken')
 const moment = require('moment');
+const Joi = require('@hapi/joi');
 
 const usuarios = require('../models/Users');
 const Serie = require('../models/series');
+
+const schemaCargaSeries = Joi.object({
+    fecha: Joi.date().required().messages({
+        'any.required': 'La fecha es obligatoria.'
+    }),
+    titulo: Joi.string().required().messages({
+        'any.required': 'El título es obligatorio.'
+    }),
+    director: Joi.string(),
+    descripcion: Joi.string()
+});
 
 router.get('/series',[validaToken], async (req, res) => {
     // console.log(req.user)
@@ -78,11 +88,12 @@ router.get('/serie/buscar/:texto', [validaToken], async (req, res) => {
 
 router.post('/carga-series',[validaToken], async (req, res) => {
     try {
-        // Verificar si se proporciona el título de la serie
-        if (!req.body.titulo) {
+        // Validar los datos del cuerpo de la solicitud
+        const { error } = schemaCargaSeries.validate(req.body);
+        if (error) {
             return res.status(400).json({
                 error: true,
-                mensaje: 'El campo título es obligatorio.'
+                mensaje: error.details[0].message
             });
         }
 
