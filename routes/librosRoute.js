@@ -13,9 +13,9 @@ const schemaCargaLibros = Joi.object({
     titulo: Joi.string().required().messages({
         'any.required': 'El título es obligatorio.'
     }),
-    autor: Joi.string(),
-    genero: Joi.string(),
-    descripcion: Joi.string()
+    autor: Joi.string().allow('').optional(),
+    genero: Joi.string().allow('').optional(),
+    descripcion: Joi.string().allow('').optional(),
 });
 
 router.get('/libros',[validaToken], async (req, res) => {

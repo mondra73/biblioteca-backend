@@ -13,8 +13,8 @@ const schemaCargaPeliculas = Joi.object({
     titulo: Joi.string().required().messages({
         'any.required': 'El título es obligatorio.'
     }),
-    director: Joi.string(),
-    descripcion: Joi.string()
+    director: Joi.string().allow('').optional(),
+    descripcion: Joi.string().allow('').optional()
 });
 
 router.get('/peliculas',[validaToken], async (req, res) => {
