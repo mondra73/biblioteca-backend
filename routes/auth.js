@@ -1,5 +1,6 @@
 const router = require('express').Router(); //esto sirve para generar una ruta en un archivo aparte (auth.js)
 const User = require('../models/Users');
+const Email = require('../models/email');
 const bcrypt = require('bcrypt');
 const Joi = require('@hapi/joi');
 const jwt = require('jsonwebtoken');
@@ -60,13 +61,25 @@ router.post('/register', async (req, res) => {
         const saltos = await bcrypt.genSalt(10);
         const password = await bcrypt.hash(req.body.password1, saltos);
 
+        // Crear un objeto de correo electrónico
+        const mail = new Email({
+            email: req.body.email,
+        });
+        console.log('ver este mail', mail)
+
+
+        // Guardar el objeto de correo electrónico en la base de datos
+        const emailDB = await mail.save();
+
+        // Crear un nuevo usuario con el correo electrónico y la contraseña
         const user = new User({
             name: req.body.name,
-            email: req.body.email,
+            email:  {email: req.body.email}, // Asignar el objeto de correo electrónico al campo de correo electrónico del usuario
             password: password
         });
 
-        const userDB = await user.save();
+        const userDB = await User.save();
+        
         res.json({ error: null, data: userDB });
     } catch (error) {
         // Manejo personalizado de errores de base de datos
