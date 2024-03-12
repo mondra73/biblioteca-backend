@@ -13,8 +13,8 @@ const userSchema = mongoose.Schema({
     email: {
         type: String,
         required: true,
-        min: 6,
-        max: 1024
+        min: 4,
+        max: 255
     },
     password: {
         type: String,
@@ -27,7 +27,12 @@ const userSchema = mongoose.Schema({
     date: {
         type: Date,
         default: Date.now
-    }
+    },
+    verificado: {
+        type: Boolean,
+        default: false,
+    },
+    token: String
 })
 
 module.exports = mongoose.model('User', userSchema);
