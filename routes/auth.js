@@ -69,16 +69,20 @@ router.post('/register', async (req, res) => {
         });
 
         const userDB = await user.save();
+
+        // Creacion del token
+        const token = jwt.sign({
+            name: user.name,
+            id: user._id
+        }, process.env.TOKEN_SECRET)
+
+        // Actualizar el usuario con el token generado
+        userDB.token = token;
+        await userDB.save();
+
         res.json({ error: null, data: userDB });
+
         // Una vez registrado, se envia el  mail con el token con 30 minutos de lifeTime
-
-         // Creacion del token
-            const token = jwt.sign({
-                name: user.name,
-                id: user._id
-            }, process.env.TOKEN_SECRET)
-
-        user.token = token;
 
         const url = process.env.URLUSER
         const destinatario = req.body.email;
@@ -100,14 +104,30 @@ router.post('/register', async (req, res) => {
     }
 });
 
-router.get('/:mail/:token'), async (req, res) => {
-    console.log('Ver el req.body: ', req.body);
+router.get('/confirmar/:mail/:token', async (req, res) => {
+    try {
+        const { mail, token } = req.params;
 
-    console.log('parametros del req ', req.params)
+        // Buscar usuario por email
+        const usuario = await User.findOne({ email: mail });
+        if (!usuario) {
+            return res.status(404).json({ error: true, mensaje: 'Email no registrado' });
+        }
 
-    const existeElEmail = await User.findOne({ email: req.params.mail });
-    if (existeElEmail) return res.status(400).json({ error: true, mensaje: 'Email no registrado' });
+        // Verificar si el token enviado coincide con el token almacenado
+        if (token !== usuario.token) {
+            return res.status(401).json({ error: true, mensaje: 'Token no válido' });
+        }
 
-}
+        // Modificar el estado del campo verificado a true
+        usuario.verificado = true;
+        await usuario.save();
+
+        res.json({ error: null, mensaje: 'Usuario verificado correctamente' });
+    } catch (error) {
+        console.error('Error al verificar usuario:', error);
+        res.status(500).json({ error: true, mensaje: 'Error al verificar usuario' });
+    }
+});
 
 module.exports = router;
