@@ -74,7 +74,7 @@ router.post('/register', async (req, res) => {
         const token = jwt.sign({
             name: user.name,
             id: user._id
-        }, process.env.TOKEN_SECRET)
+        }, process.env.TOKEN_SECRET, { expiresIn: '30m' });
 
         // Actualizar el usuario con el token generado
         userDB.token = token;
