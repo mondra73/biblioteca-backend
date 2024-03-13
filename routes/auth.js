@@ -90,7 +90,7 @@ router.post('/register', async (req, res) => {
         const url = process.env.URLUSER
         const destinatario = req.body.email;
         const asunto = ('Validar cuenta.');
-        const texto = ('Haz click en el siguiente enlace para activar tu cuenta: ', url);
+        const texto = ('Haz click en el siguiente enlace para activar tu cuenta: ', url + '/confirmar/');
         const cuerpo = texto + destinatario + '/' + token;
     
         enviarEmail(destinatario, asunto, cuerpo);
