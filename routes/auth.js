@@ -21,8 +21,11 @@ router.post('/login', async (req, res) => {
     // validaciones
     const { error } = schemaLogin.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message })
+
+    // Convertir el texto del usuario a minúsculas
+    const usuarioInput = req.body.email.toLowerCase();
     
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ email: usuarioInput });
     if (!user) return res.status(400).json({ error: true, mensaje: 'Credenciales invalidas'});
 
     const validPassword = await bcrypt.compare(req.body.password, user.password);
