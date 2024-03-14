@@ -71,4 +71,6 @@ router.get('/estadisticas', [validaToken], async (req, res) => {
   }
 });
 
+// Aca va a ir el router.ger(/ranking) == Que devolvera el listado de los ganadores
+
 module.exports = router
