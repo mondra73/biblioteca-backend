@@ -1,8 +1,11 @@
 const router = require('express').Router();
 const { required } = require('@hapi/joi');
 const validaToken = require('./validate-token');
-const usuarios = require('../models/Users');
 const bcrypt = require('bcrypt');
+const usuarios = require('../models/Users');
+const Libro = require('../models/libros'); // Importa el modelo de libros
+const Serie = require('../models/series'); // Importa el modelo de series
+const Pelicula = require('../models/peliculas'); // Importa el modelo de películas
 
 
 router.post('/cambiar-password', [validaToken], async (req, res) => {
@@ -47,5 +50,30 @@ router.post('/cambiar-password', [validaToken], async (req, res) => {
     }
 });
 
+// Ruta para obtener estadísticas de libros, series y películas del usuario
+router.get('/estadisticas', [validaToken], async (req, res) => {
+  try {
+    // Obtener el usuario actual
+    const usuario = await usuarios.findById(req.user.id);
+
+    // Obtener listas de libros, series y películas del usuario
+    const libros = await Libro.find({ usuario: usuario._id });
+    const series = await Serie.find({ usuario: usuario._id });
+    const peliculas = await Pelicula.find({ usuario: usuario._id });
+
+    // Devolver las listas al frontend
+    res.status(200).json({
+      libros: libros,
+      series: series,
+      peliculas: peliculas,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: true,
+      mensaje: 'Error al obtener las estadísticas',
+    });
+  }
+});
 
 module.exports = router
