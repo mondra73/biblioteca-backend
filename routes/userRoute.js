@@ -56,16 +56,11 @@ router.get('/estadisticas', [validaToken], async (req, res) => {
     // Obtener el usuario actual
     const usuario = await usuarios.findById(req.user.id);
 
-    // Obtener listas de libros, series y películas del usuario
-    const libros = await Libro.find({ usuario: usuario._id });
-    const series = await Serie.find({ usuario: usuario._id });
-    const peliculas = await Pelicula.find({ usuario: usuario._id });
-
     // Devolver las listas al frontend
     res.status(200).json({
-      libros: libros,
-      series: series,
-      peliculas: peliculas,
+      libros: usuario.libros,
+      series: usuario.series,
+      peliculas: usuario.peliculas,
     });
   } catch (error) {
     console.error(error);
