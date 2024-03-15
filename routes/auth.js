@@ -28,6 +28,11 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email: usuarioInput });
     if (!user) return res.status(400).json({ error: true, mensaje: 'Credenciales invalidas'});
 
+    // Verificar si la cuenta está activada
+    if (!user.verificado) {
+        return res.status(400).json({ error: true, mensaje: 'La cuenta no está activada' });
+    }
+
     const validPassword = await bcrypt.compare(req.body.password, user.password);
     if (!validPassword) return res.status(400).json({ error: true, mensaje: 'Credenciales invalidas' })
 
