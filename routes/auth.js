@@ -3,6 +3,8 @@ const User = require('../models/Users');
 const bcrypt = require('bcrypt');
 const Joi = require('@hapi/joi');
 const jwt = require('jsonwebtoken');
+const usuarios = require('../models/Users');
+const validaToken = require('./validate-token');
 const enviarEmail = require('./mails');
 
 const schemaRegister = Joi.object({
@@ -112,7 +114,7 @@ router.post('/register', async (req, res) => {
     }
 });
 
-router.get('/confirmar/:mail/:token', async (req, res) => {
+router.post('/confirmar/:mail/:token', async (req, res) => {
     try {
         const { mail, token } = req.params;
 
@@ -137,5 +139,80 @@ router.get('/confirmar/:mail/:token', async (req, res) => {
         res.status(500).json({ error: true, mensaje: 'Error al verificar usuario' });
     }
 });
+
+router.post('/cambiar-password', [validaToken], async (req, res) => {
+    // Obtener datos del cuerpo de la solicitud
+    const { contrasenaActual, nuevaContrasena, nuevaContrasena2 } = req.body;
+  
+    // Lógica para cambiar la contraseña
+    try {
+      // Buscar el usuario en la base de datos
+      const usuarioDB = await usuarios.findOne({_id: req.user.id});
+  
+      // Verificar si la oficina existe
+      if (!usuarioDB) {
+        return res.status(404).json({ error: 'Usuario no encontrada' });
+      }
+      
+      // Verificar la contraseña actual
+      const contrasenaValida = await bcrypt.compare(contrasenaActual, usuarioDB.password);
+      if (!contrasenaValida) {
+        return res.status(401).json({ error: 'Contraseña actual incorrecta' });
+      }
+
+      // Verificar que las nuevas contraseñas sean iguales
+      if (nuevaContrasena !== nuevaContrasena2) {
+        return res.status(401).json({ error: 'Contraseñas nuevas diferentes' });
+      }
+  
+      // Generar el hash de la nueva contraseña
+      const saltos = await bcrypt.genSalt(10);
+      const nuevaContrasenaHash = await bcrypt.hash(nuevaContrasena, saltos);
+  
+      // Actualizar la contraseña en la base de datos
+      usuarioDB.password = nuevaContrasenaHash;
+      await usuarioDB.save();
+  
+      res.json({
+        mensaje: 'Contraseña cambiada exitosamente',
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+router.post('/olvido-password', async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        // Busca al usuario por su correo electrónico en la base de datos
+        const user = await User.findOne({ email });
+        if (!user) {
+          return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+    
+        const token = user.token;
+    
+        // Envia el correo electrónico con el token
+        const transporter = nodemailer.createTransport({
+          // Configura el transporte de correo (SMTP, Gmail, etc.)
+        });
+    
+        const url = process.env.URLUSER
+        const destinatario = user;
+        const asunto = ('Restablecer contraseña.');
+        const texto = ('Hola ' + req.body.name + '. Haz click en el siguiente enlace restablecer su contraseña; (En el caso de que la haya olvidado, de lo contrario desestime este correo): ' + url + '/confirmar/');
+        const cuerpo = texto + destinatario + '/' + token;
+    
+        enviarEmail(destinatario, asunto, cuerpo);
+
+      } catch (error) {
+        console.error('Error al procesar la solicitud de restablecimiento:', error);
+        res.status(500).send('Error al procesar la solicitud de restablecimiento');
+      }
+
+})
+
 
 module.exports = router;
