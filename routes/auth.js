@@ -184,7 +184,7 @@ router.post('/cambiar-password', [validaToken], async (req, res) => {
 
 router.post('/olvido-password', async (req, res) => {
     const { email } = req.body;
-
+    console.log(email)
     try {
         // Busca al usuario por su correo electrónico en la base de datos
         const user = await User.findOne({ email });
