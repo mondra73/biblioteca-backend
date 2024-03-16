@@ -100,8 +100,8 @@ router.post('/carga-libros', [validaToken], async (req, res) => {
         }
 
         const usuarioDB = await usuarios.findOne({ _id: req.user.id });
-        const fechaActual = moment().startOf('day');
-        const fechaLibro = moment(req.body.fecha);
+        const fechaActual = moment().startOf('day'); // Fecha actual sin la hora
+        const fechaLibro = moment(req.body.fecha).startOf('day'); // Fecha del libro sin la hora
 
         if (fechaLibro.isAfter(fechaActual)) {
             return res.status(400).json({
@@ -195,7 +195,7 @@ router.put('/libro/:libroId', [validaToken], async (req, res) => {
         // Verificar si la fecha del libro es posterior al día actual
         if (fecha) {
             const fechaActual = moment().startOf('day');
-            const fechaLibro = moment(fecha);
+            const fechaLibro = moment(fecha).startOf('day');
             if (fechaLibro.isAfter(fechaActual)) {
                 return res.status(400).json({ message: 'La fecha del libro no puede ser posterior al día actual' });
             }

@@ -100,10 +100,10 @@ router.post('/carga-series',[validaToken], async (req, res) => {
         const usuarioDB = await usuarios.findOne({_id: req.user.id});
 
         // Obtener la fecha actual
-        const fechaActual = moment().startOf('day');
+        const fechaActual = moment().startOf('day'); // Fecha actual sin la hora
 
         // Convertir la fecha de la serie a un objeto Moment
-        const fechaSerie = moment(req.body.fecha);
+        const fechaSerie = moment(req.body.fecha).startOf('day'); // Fecha del libro sin la hora
 
         // Verificar si la fecha de la serie es posterior al día actual
         if (fechaSerie.isAfter(fechaActual)) {
@@ -201,7 +201,7 @@ router.put('/serie/:serieId', [validaToken], async (req, res) => {
         // Verificar si la fecha de la serie es posterior al día actual
         if (fecha) {
             const fechaActual = moment().startOf('day');
-            const fechaSerie = moment(fecha);
+            const fechaSerie = moment(fecha).startOf('day');
             if (fechaSerie.isAfter(fechaActual)) {
                 return res.status(400).json({ message: 'La fecha de la serie no puede ser posterior al día actual' });
             }

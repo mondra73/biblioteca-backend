@@ -100,10 +100,10 @@ router.post('/carga-peliculas',[validaToken], async (req, res) => {
         const usuarioDB = await usuarios.findOne({_id: req.user.id});
 
         // Obtener la fecha actual
-        const fechaActual = moment().startOf('day');
+        const fechaActual = moment().startOf('day'); // Fecha actual sin la hora
 
         // Convertir la fecha de la pelicula a un objeto Moment
-        const fechaPelicula = moment(req.body.fecha);
+        const fechaPelicula = moment(req.body.fecha).startOf('day'); // Fecha del libro sin la hora
 
         // Verificar si la fecha de la pelicula es posterior al día actual
         if (fechaPelicula.isAfter(fechaActual)) {
@@ -201,7 +201,7 @@ router.put('/pelicula/:peliculaId', [validaToken], async (req, res) => {
         // Verificar si la fecha de la pelicula es posterior al día actual
         if (fecha) {
             const fechaActual = moment().startOf('day');
-            const fechaPelicula = moment(fecha);
+            const fechaPelicula = moment(fecha).startOf('day');
             if (fechaPelicula.isAfter(fechaActual)) {
                 return res.status(400).json({ message: 'La fecha de la pelicula no puede ser posterior al día actual' });
             }
