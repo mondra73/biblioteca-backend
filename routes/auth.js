@@ -114,10 +114,10 @@ router.post('/register', async (req, res) => {
     }
 });
 
-router.post('/confirmar/:mail/:token', async (req, res) => {
+router.post('/confirmar/', async (req, res) => {
     try {
-        const { mail, token } = req.params;
-
+        const { mail, token } = req.body;
+        console.log(mail, token)
         // Buscar usuario por email
         const usuario = await User.findOne({ email: mail });
         if (!usuario) {
