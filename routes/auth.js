@@ -41,7 +41,7 @@ router.post('/login', async (req, res) => {
     const usuarioInput = req.body.email.toLowerCase();
     
     const user = await User.findOne({ email: usuarioInput });
-    if (!user) return res.status(400).json({ error: 'Credenciales invalidas'});
+    if (!user) return res.status(400).json({ error: 'Usuario no registrado'});
 
     // Verificar si la cuenta está activada
     if (!user.verificado) {
