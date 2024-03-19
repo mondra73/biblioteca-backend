@@ -37,11 +37,15 @@ router.get('/estadisticas', [validaToken], async (req, res) => {
       }
     });
 
+    // Obtener el número total de usuarios en la base de datos
+    const numUsuarios = usuarios.length;
+
     // Devolver los usuarios con más libros, series y películas
     res.status(200).json({
       usuarioMasLibros,
       usuarioMasSeries,
       usuarioMasPeliculas,
+      totalUsuarios: numUsuarios // Agregar el número total de usuarios
     });
   } catch (error) {
     console.error(error);
