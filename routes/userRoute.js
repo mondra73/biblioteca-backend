@@ -23,17 +23,17 @@ router.get('/estadisticas', [validaToken], async (req, res) => {
 
       if (numLibros > maxLibros) {
         maxLibros = numLibros;
-        usuarioMasLibros = `${usuario.name} es el que mas libros leyo con ${numLibros} libros.`;
+        usuarioMasLibros = { nombre: usuario.name, cantidad: numLibros };
       }
 
       if (numSeries > maxSeries) {
         maxSeries = numSeries;
-        usuarioMasSeries = `${usuario.name} es el que mas series vio con ${numSeries} series.`;
+        usuarioMasSeries = { nombre: usuario.name, cantidad: numSeries };
       }
 
       if (numPeliculas > maxPeliculas) {
         maxPeliculas = numPeliculas;
-        usuarioMasPeliculas = `${usuario.name} es el que mas peliculas vio con ${numPeliculas} peliculas.`;
+        usuarioMasPeliculas = { nombre: usuario.name, cantidad: numPeliculas };
       }
     });
 
