@@ -7,17 +7,29 @@ const usuarios = require('../models/Users');
 const validaToken = require('./validate-token');
 const enviarEmail = require('./mails');
 
-const schemaRegister = Joi.object({
-    name: Joi.string().min(4).max(255).required(),
-    email: Joi.string().min(6).max(255).required().email(),
-    password1: Joi.string().min(6).max(1024).required(),
-    password2: Joi.string().valid(Joi.ref('password1')).required().label('Confirmación de contraseña').messages({ 'any.only': '{{#label}} debe coincidir con la contraseña' })
-})
+const customMessages = {
+    'string.base': '{{#label}} debe ser una cadena',
+    'string.min': '{{#label}} debe tener al menos {#limit} caracteres',
+    'string.max': '{{#label}} debe tener como máximo {#limit} caracteres',
+    'string.email': 'El formato de {{#label}} no es válido',
+    'string.empty': 'El nombre no puede estar vacío',
+    'any.required': '{{#label}} es un campo requerido',
+    'any.only': '{{#label}} debe coincidir con {{#other}}',
+  };
 
-const schemaLogin = Joi.object({
-    email: Joi.string().min(6).max(255).required().email(),
-    password: Joi.string().min(6).max(1024).required()
-})
+  const schemaRegister = Joi.object({
+    name: Joi.string().min(4).max(255).required().messages(customMessages),
+    email: Joi.string().min(6).max(255).required().email().messages(customMessages),
+    password1: Joi.string().min(6).max(1024).required().messages(customMessages),
+    password2: Joi.string().valid(Joi.ref('password1')).required()
+      .label('Confirmación de contraseña')
+      .messages({ 'any.only': '{{#label}} debe coincidir con la contraseña' }),
+  });
+  
+  const schemaLogin = Joi.object({
+    email: Joi.string().min(6).max(255).required().email().messages(customMessages),
+    password: Joi.string().min(6).max(1024).required().messages(customMessages),
+  });
 
 router.post('/login', async (req, res) => {
     // validaciones
@@ -28,15 +40,15 @@ router.post('/login', async (req, res) => {
     const usuarioInput = req.body.email.toLowerCase();
     
     const user = await User.findOne({ email: usuarioInput });
-    if (!user) return res.status(400).json({ error: true, mensaje: 'Credenciales invalidas'});
+    if (!user) return res.status(400).json({ error: 'Credenciales invalidas'});
 
     // Verificar si la cuenta está activada
     if (!user.verificado) {
-        return res.status(400).json({ error: true, mensaje: 'La cuenta no está activada' });
+        return res.status(400).json({ error: 'La cuenta no está activada' });
     }
 
     const validPassword = await bcrypt.compare(req.body.password, user.password);
-    if (!validPassword) return res.status(400).json({ error: true, mensaje: 'Credenciales invalidas' })
+    if (!validPassword) return res.status(400).json({ error: 'Credenciales invalidas' })
 
     // Nota: En los mensajes del mail y contraseñas incorrectos, poner credenciales invalidas. Es para no darle pistas al usuario en que se esta equivocando
 
@@ -55,7 +67,7 @@ router.post('/login', async (req, res) => {
 })
 
 router.post('/register', async (req, res) => {
-    console.log('a ver el req.body: ', req.body);
+   
     // Validaciones de Usuarios
     const { error } = schemaRegister.validate(req.body);
 
@@ -64,7 +76,7 @@ router.post('/register', async (req, res) => {
     }
 
     const existeElEmail = await User.findOne({ email: req.body.email });
-    if (existeElEmail) return res.status(400).json({ error: true, mensaje: 'Email ya registrado' });
+    if (existeElEmail) return res.status(400).json({ error: 'Email ya registrado' });
 
     try {
         // Encriptar la contraseña
