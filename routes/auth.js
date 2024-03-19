@@ -15,10 +15,11 @@ const customMessages = {
     'string.empty': 'El nombre no puede estar vacío',
     'any.required': '{{#label}} es un campo requerido',
     'any.only': '{{#label}} debe coincidir con {{#other}}',
+    'string.pattern.base': '{{#label}} debe contener solo letras sin espacios',
   };
 
   const schemaRegister = Joi.object({
-    name: Joi.string().min(4).max(255).required().messages(customMessages),
+    name: Joi.string().min(4).max(255).required().pattern(new RegExp('^[A-Za-z]+$')).messages(customMessages),
     email: Joi.string().min(6).max(255).required().email().messages(customMessages),
     password1: Joi.string().min(6).max(1024).required().messages(customMessages),
     password2: Joi.string().valid(Joi.ref('password1')).required()
