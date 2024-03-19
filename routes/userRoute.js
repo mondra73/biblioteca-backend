@@ -52,5 +52,31 @@ router.get('/estadisticas', [validaToken], async (req, res) => {
   }
 });
 
+// Ruta para obtener estadísticas particulares del usuario autenticado
+router.get('/estadisticas-user', [validaToken], async (req, res) => {
+  try {
+    // Obtener el usuario actual autenticado
+    const usuario = await Usuarios.findById(req.user.id);
+
+    // Calcular estadísticas para el usuario
+    const numLibros = usuario.libros.length;
+    const numSeries = usuario.series.length;
+    const numPeliculas = usuario.peliculas.length;
+
+    // Devolver las estadísticas particulares del usuario
+    res.status(200).json({
+      libros: numLibros,
+      series: numSeries,
+      peliculas: numPeliculas,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: true,
+      mensaje: 'Error al obtener las estadísticas del usuario',
+    });
+  }
+});
+
 
 module.exports = router;
