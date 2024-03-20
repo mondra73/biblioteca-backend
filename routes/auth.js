@@ -5,6 +5,7 @@ const Joi = require('@hapi/joi');
 const jwt = require('jsonwebtoken');
 const usuarios = require('../models/Users');
 const validaToken = require('./validate-token');
+const nodemailer = require('nodemailer');
 const enviarEmail = require('./mails');
 
 const customMessages = {
@@ -195,37 +196,82 @@ router.post('/cambiar-password', [validaToken], async (req, res) => {
     }
 });
 
-router.post('/olvido-password', async (req, res) => {
-    const { email } = req.body;
-    console.log(email)
-    try {
-        // Busca al usuario por su correo electrónico en la base de datos
-        const user = await User.findOne({ email });
-        if (!user) {
-          return res.status(404).json({ error: 'Usuario no encontrado' });
-        }
-    
-        const token = user.token;
-    
-        // Envia el correo electrónico con el token
-        const transporter = nodemailer.createTransport({
-          // Configura el transporte de correo (SMTP, Gmail, etc.)
-        });
-    
-        const url = process.env.URLUSER
-        const destinatario = user;
-        const asunto = ('Restablecer contraseña.');
-        const texto = ('Hola ' + req.body.name + '. Haz click en el siguiente enlace restablecer su contraseña; (En el caso de que la haya olvidado, de lo contrario desestime este correo): ' + url + '/confirmar/');
-        const cuerpo = texto + destinatario + '/' + token;
-    
-        enviarEmail(destinatario, asunto, cuerpo);
+router.post('/restablecer-password',  async (req, res) => {
+  // Obtener datos del cuerpo de la solicitud
+  const { mail, token, nuevaContrasena, nuevaContrasena2 } = req.body;
+ 
+  // Lógica para cambiar la contraseña
+  try {
+    // Buscar el usuario en la base de datos
+    const usuarioDB = await usuarios.findOne({email : mail});
 
-      } catch (error) {
-        console.error('Error al procesar la solicitud de restablecimiento:', error);
-        res.status(500).send('Error al procesar la solicitud de restablecimiento');
+    // Verificar si el usuario existe
+    if (!usuarioDB) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    
+    // Verificar que las nuevas contraseñas sean iguales
+    if (nuevaContrasena !== nuevaContrasena2) {
+      return res.status(401).json({ error: 'Contraseñas nuevas diferentes' });
+    }
+
+    // Generar el hash de la nueva contraseña
+    const saltos = await bcrypt.genSalt(10);
+    const nuevaContrasenaHash = await bcrypt.hash(nuevaContrasena, saltos);
+
+    // Actualizar la contraseña en la base de datos
+    usuarioDB.password = nuevaContrasenaHash;
+    await usuarioDB.save();
+
+    // Nombre de usuario obtenido de la base de datos
+    const nombreUsuario = usuarioDB.name;
+
+    res.json({
+      mensaje: 'Contraseña restablecida exitosamente',
+      nombre: nombreUsuario,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+router.post('/olvido-password', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+      // Busca al usuario por su correo electrónico en la base de datos
+      const user = await User.findOne({ email });
+      if (!user) {
+          return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-})
+      // Generar un token para restablecer la contraseña
+      const token = generarToken();
+
+      // Guardar el token en la base de datos
+      user.token = token;
+      await user.save(); 
+
+      const url = process.env.URLUSER;
+      const destinatario = user.email; // Usar el email del usuario
+      const asunto = 'Restablecer contraseña';
+      const texto = `Hola ${user.name}. Haz clic en el siguiente enlace para restablecer tu contraseña: ${url}/restablecer/${destinatario}/${token}`;
+      const cuerpo = texto;
+
+      enviarEmail(destinatario, asunto, cuerpo);
+
+      res.status(200).json({ message: 'Correo de restablecimiento enviado correctamente' });
+  } catch (error) {
+      console.error('Error al procesar la solicitud de restablecimiento:', error);
+      res.status(500).json({ error: 'Error al procesar la solicitud de restablecimiento' });
+  }
+});
+
+// Función para generar un token (puedes utilizar tu propia lógica aquí)
+function generarToken() {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
 
 
 module.exports = router;
