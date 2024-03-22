@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const librosSchema = require('../models/libros');
 const peliculasSchema = require('../models/peliculas');
 const seriesSchema = require('../models/series');
+const pendientesSchema = require('../models/pendientes');
 
 const userSchema = mongoose.Schema({
     name: {
@@ -24,6 +25,7 @@ const userSchema = mongoose.Schema({
     libros: [librosSchema.schema],
     peliculas: [peliculasSchema.schema],
     series: [seriesSchema.schema],
+    pendientes: [pendientesSchema.schema],
     date: {
         type: Date,
         default: Date.now
