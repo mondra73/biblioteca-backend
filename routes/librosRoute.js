@@ -72,8 +72,24 @@ router.get('/libro/buscar/:texto', [validaToken], async (req, res) => {
 
         // Buscar el libro por su título o autor (ignorando mayúsculas y minúsculas) de manera parcial
         const librosEncontrados = user.libros.filter(libro => {
-            return libro.titulo.toLowerCase().includes(texto) || libro.autor.toLowerCase().includes(texto) || libro.genero.toLowerCase().includes(texto) || libro.descripcion.toLowerCase().includes(texto);
+            // Validar que el libro y sus propiedades no sean undefined
+            if (
+                libro &&
+                libro.titulo &&
+                libro.autor &&
+                libro.genero &&
+                libro.descripcion) {
+                // Realizar la búsqueda ignorando mayúsculas y minúsculas
+                return (
+                    libro.titulo.toLowerCase().includes(texto) ||
+                    libro.autor.toLowerCase().includes(texto) ||
+                    libro.genero.toLowerCase().includes(texto) ||
+                    libro.descripcion.toLowerCase().includes(texto)
+                );
+            }
+            return false; // No incluir libros con propiedades undefined
         });
+        
 
         if (librosEncontrados.length === 0) {
             return res.status(404).json({ message: 'No se encontraron libros con ese título o autor' });
