@@ -10,6 +10,9 @@ const schemaCargaPendientes = Joi.object({
     titulo: Joi.string().required().messages({
         'any.required': 'El título es obligatorio.'
     }),
+    autorDirector: Joi.string().required('').messages({
+        'any.required': 'El tipo es obligatorio.'
+    }),
     autorDirector: Joi.string().allow('').optional(),
     descripcion: Joi.string().allow('').optional(),
 });
@@ -73,7 +76,8 @@ router.post('/carga-pendientes', [validaToken], async (req, res) => {
         const pendiente = new Pendiente({
             titulo: req.body.titulo,
             autorDirector: req.body.autorDirector,
-            descripcion: req.body.descripcion
+            descripcion: req.body.descripcion,
+            tipo: req.body.tipo
         });
 
         usuarioDB.pendientes.push(pendiente);
