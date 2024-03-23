@@ -175,33 +175,33 @@ router.put('/pendiente/:pendienteId', [validaToken], async (req, res) => {
 
 // Analizar despues si vale la pena poner un buscador aca
 
-// router.get('/pendiente/buscar/:texto', [validaToken], async (req, res) => {
-//     const userId = req.user.id;
-//     const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
+router.get('/pendiente/buscar/:texto', [validaToken], async (req, res) => {
+    const userId = req.user.id;
+    const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
 
-//     try {
-//         // Verificar si el usuario existe
-//         const user = await usuarios.findById(userId);
-//         if (!user) {
-//             return res.status(404).json({ message: 'Usuario no encontrado' });
-//         }
+    try {
+        // Verificar si el usuario existe
+        const user = await usuarios.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
 
-//         // Buscar el libro por su título o autor (ignorando mayúsculas y minúsculas) de manera parcial
-//         const librosEncontrados = user.libros.filter(libro => {
-//             return libro.titulo.toLowerCase().includes(texto) || libro.autor.toLowerCase().includes(texto) || libro.genero.toLowerCase().includes(texto) || libro.descripcion.toLowerCase().includes(texto);
-//         });
+        // Buscar el libro por su título o autor (ignorando mayúsculas y minúsculas) de manera parcial
+        const pendientesEncontrados = user.pendientes.filter(pendiente => {
+            return pendiente.titulo.toLowerCase().includes(texto) || pendiente.autorDirector.toLowerCase().includes(texto) || pendiente.descripcion.toLowerCase().includes(texto);
+        });
 
-//         if (librosEncontrados.length === 0) {
-//             return res.status(404).json({ message: 'No se encontraron libros con ese título o autor' });
-//         }
+        if (pendientesEncontrados.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron pendientes en el servidor' });
+        }
 
-//         // Si se encuentran libros, devolverlos como respuesta
-//         res.status(200).json(librosEncontrados);
+        // Si se encuentran libros, devolverlos como respuesta
+        res.status(200).json(pendientesEncontrados);
 
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).json({ message: 'Error interno del servidor' });
-//     }
-// });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+});
 
 module.exports = router
