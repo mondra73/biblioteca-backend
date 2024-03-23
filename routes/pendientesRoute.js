@@ -74,9 +74,9 @@ router.post('/carga-pendientes', [validaToken], async (req, res) => {
                 
         const pendiente = new Pendiente({
             titulo: req.body.titulo,
+            tipo: req.body.tipo,
             autorDirector: req.body.autorDirector,
             descripcion: req.body.descripcion,
-            tipo: req.body.tipo
         });
 
         usuarioDB.pendientes.push(pendiente);
