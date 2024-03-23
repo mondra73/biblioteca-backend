@@ -11,7 +11,8 @@ const schemaCargaPendientes = Joi.object({
         'any.required': 'El título es obligatorio.'
     }),
     tipo: Joi.string().required().messages({
-        'any.only': 'El tipo debe ser Libros, Peliculas o Series.', }),
+        'any.only': 'El tipo debe ser Libros, Peliculas o Series.', 
+        'string.empty': 'El tipo no puede estar vacío.'}),
     autorDirector: Joi.string().allow('').optional(),
     descripcion: Joi.string().allow('').optional(),
 });
