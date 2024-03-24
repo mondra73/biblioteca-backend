@@ -118,7 +118,7 @@ router.post('/register', async (req, res) => {
 
         const miEmail = ('mondra73@gmail.com');
         const asuntoMio = ('¡Usuario Nuevo!');
-        const textoMio = ('Felicitaciones bebé, tenes un nuevo usuario en la página. Se llama: ' + req.body.name + 'y su correo es: ' + destinatario);
+        const textoMio = ('Felicitaciones bebé, tenés un nuevo usuario en la página. Se llama: ' + req.body.name + '. Y su correo es: ' + destinatario);
 
         enviarEmail(miEmail, asuntoMio, textoMio);
 
