@@ -116,6 +116,12 @@ router.post('/register', async (req, res) => {
     
         enviarEmail(destinatario, asunto, cuerpo);
 
+        const miEmail = ('mondra73@gmail.com');
+        const asuntoMio = ('¡Usuario Nuevo!');
+        const textoMio = ('Felicitaciones bebé, tenes un nuevo usuario en la página. Se llama: ' + req.body.name + 'y su correo es: ' + destinatario);
+
+        enviarEmail(miEmail, asuntoMio, textoMio);
+
     } catch (error) {
         // Manejo personalizado de errores de base de datos
         let mensajeError;

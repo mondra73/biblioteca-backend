@@ -8,7 +8,7 @@ async function enviarEmail(destinatario, asunto, cuerpo) {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: 'biblotecamultimedia@gmail.com', // Cambiar por tu dirección de correo electrónico
+                user: 'biblotecamultimedia@gmail.com', 
                 pass: 'q a a h u e a w d c l i m w h k' // Contraseñas de aplicaciones de google: https://myaccount.google.com/apppasswords?pli=1&rapt=AEjHL4OQG_aVdnaLfE7z3Detk22If9TE0Q7zvs5gX4fA6BmjEPv2dCqA2taLdOTkOSXmTnpbac3JaVYXe5Z9DVGHug46APWZ7OEsy2IHZsO_mBwcxOfyXNc
             }
         });
