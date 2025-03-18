@@ -12,7 +12,7 @@ const Pelicula = require('../models/peliculas'); // Importa el modelo de pelícu
 router.get('/estadisticas', [validaToken], async (req, res) => {
   try {
     // Obtener todos los usuarios
-    const usuarios = await Usuarios.find();
+    const usuarios = await usuarios.find();
 
     // Calcular estadísticas para cada usuario y encontrar los máximos
     let maxLibros = 0, maxSeries = 0, maxPeliculas = 0;
@@ -62,7 +62,7 @@ router.get('/estadisticas', [validaToken], async (req, res) => {
 router.get('/estadisticas-user', [validaToken], async (req, res) => {
   try {
     // Obtener el usuario actual autenticado
-    const usuario = await Usuarios.findById(req.user.id);
+    const usuario = await usuarios.findById(req.user.id);
 
     // Calcular estadísticas para el usuario
     const numLibros = usuario.libros.length;
