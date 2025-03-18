@@ -9,19 +9,21 @@ const Pelicula = require('../models/peliculas'); // Importa el modelo de pelícu
 
 
 // Ruta para obtener estadísticas de libros, series y películas de todos los usuarios
-router.get('/estadisticas', [validaToken], async (req, res) => {
+router.get('/estadisticas', validaToken, async (req, res) => {
   try {
     // Obtener todos los usuarios
-    const usuarios = await usuarios.find();
+    const allUsers = await usuarios.find(); // Cambié el nombre de la variable
 
     // Calcular estadísticas para cada usuario y encontrar los máximos
     let maxLibros = 0, maxSeries = 0, maxPeliculas = 0;
-    let usuarioMasLibros = '', usuarioMasSeries = '', usuarioMasPeliculas = '';
+    let usuarioMasLibros = { nombre: '', cantidad: 0 };
+    let usuarioMasSeries = { nombre: '', cantidad: 0 };
+    let usuarioMasPeliculas = { nombre: '', cantidad: 0 };
 
-    usuarios.forEach(usuario => {
-      const numLibros = usuario.libros.length;
-      const numSeries = usuario.series.length;
-      const numPeliculas = usuario.peliculas.length;
+    allUsers.forEach(usuario => {
+      const numLibros = usuario.libros ? usuario.libros.length : 0;
+      const numSeries = usuario.series ? usuario.series.length : 0;
+      const numPeliculas = usuario.peliculas ? usuario.peliculas.length : 0;
 
       if (numLibros > maxLibros) {
         maxLibros = numLibros;
@@ -40,7 +42,7 @@ router.get('/estadisticas', [validaToken], async (req, res) => {
     });
 
     // Obtener el número total de usuarios en la base de datos
-    const numUsuarios = usuarios.length;
+    const numUsuarios = allUsers.length;
 
     // Devolver los usuarios con más libros, series y películas
     res.status(200).json({
