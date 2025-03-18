@@ -18,48 +18,52 @@ const schemaCargaLibros = Joi.object({
     descripcion: Joi.string().allow('').optional(),
 });
 
-router.get('/libros',[validaToken], async (req, res) => {
-    // console.log(req.user)
+//paginacion aca
+router.get('/libros', async (req, res) => {
+    const PAGE_SIZE = 20; // Número de libros por página
     try {
-        const usuarioID = await usuarios.findOne({_id: req.user.id});
-        // console.log(usuarioID)
-        res.json('200', {
-            usuario: usuarioID.libros,
-        })
+        // Obtener el número de página desde la consulta (por ejemplo, /libros?page=1)
+        const page = parseInt(req.query.page) || 1;
+
+        // Calcular el índice de inicio del primer elemento de la página actual
+        const startIndex = (page - 1) * PAGE_SIZE;
+
+        // Obtener el usuario actual con sus libros
+        const usuario = await usuarios.findOne({ _id: req.user.id });
+
+        if (!usuario) {
+            return res.status(404).json({
+                error: true,
+                mensaje: "Usuario no encontrado"
+            });
+        }
+
+        // Obtener el total de libros del usuario
+        const totalLibros = usuario.libros.length;
+
+        // Aplicar paginación manualmente sobre el array de libros
+        const librosPaginados = usuario.libros.slice(startIndex, startIndex + PAGE_SIZE);
+
+        // Calcular el número total de páginas
+        const totalPages = Math.ceil(totalLibros / PAGE_SIZE);
+
+        // Responder con los datos paginados
+        res.status(200).json({
+            libros: librosPaginados,
+            totalPages,
+            currentPage: page,
+            totalLibros
+        });
     } catch (error) {
-        res.json('400', {
+        res.status(400).json({
             error: true,
-            mensaje: error
-        })
+            mensaje: error.message
+        });
     }
 });
 
-// Busca libro cuando clickeas. Para despues editarlo o eliminarlo
-router.get('/libro/:libroId', [validaToken], async (req, res) => {
-    const userId = req.user.id
-    const libroId = req.params.libroId;
-    const { fecha, titulo, autor, genero, descripcion } = req.body;
-
-    try {
-        // Verificar si el usuario existe
-        const user = await usuarios.findOne({ _id: userId });
-        if (!user) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
-        }
-
-        const libro = user.libros.find(libro => libro._id.toString() === libroId);
-        if (!libro) {
-            return res.status(404).json({ error: true, mensaje: 'Libro no encontrado' });
-        }
-        // Devolver el libro encontrado en la respuesta
-        res.json(libro);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error interno del servidor' });
-    }
-});
-
-router.get('/libro/buscar/:texto', [validaToken], async (req, res) => {
+//aca tambien paginacion
+router.get('/libro/buscar/:texto', async (req, res) => {
     const userId = req.user.id;
     const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
 
@@ -88,7 +92,32 @@ router.get('/libro/buscar/:texto', [validaToken], async (req, res) => {
     }
 });
 
-router.post('/carga-libros', [validaToken], async (req, res) => {
+// Busca libro cuando clickeas. Para despues editarlo o eliminarlo
+router.get('/libro/:libroId', async (req, res) => {
+    const userId = req.user.id
+    const libroId = req.params.libroId;
+    const { fecha, titulo, autor, genero, descripcion } = req.body;
+
+    try {
+        // Verificar si el usuario existe
+        const user = await usuarios.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const libro = user.libros.find(libro => libro._id.toString() === libroId);
+        if (!libro) {
+            return res.status(404).json({ error: true, mensaje: 'Libro no encontrado' });
+        }
+        // Devolver el libro encontrado en la respuesta
+        res.json(libro);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+});
+
+router.post('/carga-libros', async (req, res) => {
     try {
         // Validar los datos del cuerpo de la solicitud
         const { error } = schemaCargaLibros.validate(req.body);
@@ -134,7 +163,7 @@ router.post('/carga-libros', [validaToken], async (req, res) => {
     }
 });
 
-router.delete('/libro/:idLibro', [validaToken], async (req, res) => {
+router.delete('/libro/:idLibro', async (req, res) => {
     try {
       const usuarioId = req.user.id;
       const libroId = req.params.idLibro;
@@ -169,7 +198,7 @@ router.delete('/libro/:idLibro', [validaToken], async (req, res) => {
     }
   });
 
-router.put('/libro/:libroId', [validaToken], async (req, res) => {
+router.put('/libro/:libroId', async (req, res) => {
     const userId = req.user.id
     const libroId = req.params.libroId;
     const { fecha, titulo, autor, genero, descripcion } = req.body;
