@@ -38,11 +38,14 @@ router.get('/libros', async (req, res) => {
             });
         }
 
-        // Obtener el total de libros del usuario
-        const totalLibros = usuario.libros.length;
+        // Invertir el array de libros para que los más recientes estén primero
+        const librosInvertidos = [...usuario.libros].reverse(); 
 
-        // Aplicar paginación manualmente sobre el array de libros
-        const librosPaginados = usuario.libros.slice(startIndex, startIndex + PAGE_SIZE);
+        // Obtener el total de libros del usuario
+        const totalLibros = librosInvertidos.length;
+
+        // Aplicar paginación manualmente sobre el array invertido
+        const librosPaginados = librosInvertidos.slice(startIndex, startIndex + PAGE_SIZE);
 
         // Calcular el número total de páginas
         const totalPages = Math.ceil(totalLibros / PAGE_SIZE);
