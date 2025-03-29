@@ -1,5 +1,4 @@
 const router = require('express').Router();
-const validaToken = require('./validate-token');
 const moment = require('moment');
 const Joi = require('@hapi/joi');
 
@@ -17,23 +16,61 @@ const schemaCargaSeries = Joi.object({
     descripcion: Joi.string().allow('').optional()
 });
 
-router.get('/series',[validaToken], async (req, res) => {
-    // console.log(req.user)
+router.get('/series', async (req, res) => {
+
+    const PAGE_SIZE = 20;
     try {
-        const usuarioID = await usuarios.findOne({_id: req.user.id});
-        // console.log(usuarioID)
-        res.json('200', {
-            usuario: usuarioID.series,
-        })
+        const page = parseInt(req.query.page) || 1;
+
+        const usuario = await usuarios.findOne({_id: req.user.id});
+
+        if (!usuario) {
+            return res.status(404).json({
+                error: true,
+                mensaje: "Usuario no encontrado"
+            });
+        }
+    
+        // Normalizar fechas y seleccionar solo los campos necesarios de cada libro
+        const seriesNormalizados = usuario.series.map(serie => ({
+            id: serie._id || serie.id, // dependiendo de cómo lo tengas en tu schema
+            titulo: serie.titulo,
+            fecha: serie.fecha ? new Date(serie.fecha) : new Date(0),
+            director: serie.director,
+            descripcion: serie.descripcion
+        }));
+
+        // Ordenar las películas por fecha (más reciente primero)
+        const seriesOrdenados = seriesNormalizados.sort((a, b) => b.fecha - a.fecha);
+
+        // Obtener el total de películas del usuario
+        const totalSeries = seriesOrdenados.length;
+        
+        // Calcular el índice de inicio para la paginación
+        const startIndex = (page - 1) * PAGE_SIZE;
+
+        // Aplicar paginación
+        const seriesPaginados = seriesOrdenados.slice(startIndex, startIndex + PAGE_SIZE);
+
+        // Calcular el número total de páginas
+        const totalPages = Math.ceil(totalSeries / PAGE_SIZE);
+
+        // Responder con los datos paginados
+        res.status(200).json({
+            series: seriesPaginados,
+            totalPages,
+            currentPage: page,
+            totalSeries
+        });
     } catch (error) {
         res.json('400', {
             error: true,
-            mensaje: error
+            mensaje: error.message
         })
     }
 });
 
-router.get('/serie/:serieId', [validaToken], async (req, res) => {
+router.get('/serie/:serieId', async (req, res) => {
     const userId = req.user.id
     const serieId = req.params.serieId;
     const { fecha, titulo, director, descripcion } = req.body;
@@ -57,7 +94,7 @@ router.get('/serie/:serieId', [validaToken], async (req, res) => {
     }
 });
 
-router.get('/serie/buscar/:texto', [validaToken], async (req, res) => {
+router.get('/serie/buscar/:texto', async (req, res) => {
     const userId = req.user.id;
     const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
 
@@ -86,7 +123,7 @@ router.get('/serie/buscar/:texto', [validaToken], async (req, res) => {
     }
 });
 
-router.post('/carga-series',[validaToken], async (req, res) => {
+router.post('/carga-series',async (req, res) => {
     try {
         // Validar los datos del cuerpo de la solicitud
         const { error } = schemaCargaSeries.validate(req.body);
@@ -140,7 +177,7 @@ router.post('/carga-series',[validaToken], async (req, res) => {
     }
 });
 
-router.delete('/serie/:idSerie', [validaToken], async (req, res) => {
+router.delete('/serie/:idSerie', async (req, res) => {
     try {
       const usuarioId = req.user.id;
       const serieId = req.params.idSerie;
@@ -175,7 +212,7 @@ router.delete('/serie/:idSerie', [validaToken], async (req, res) => {
     }
 });
 
-router.put('/serie/:serieId', [validaToken], async (req, res) => {
+router.put('/serie/:serieId', async (req, res) => {
     const userId = req.user.id
     const serieId = req.params.serieId;
     const { fecha, titulo, director, descripcion } = req.body;

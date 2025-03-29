@@ -22,15 +22,12 @@ const schemaCargaLibros = Joi.object({
 router.get('/libros', async (req, res) => {
     const PAGE_SIZE = 20; // Número de libros por página
     try {
-        // Obtener el número de página desde la consulta (por ejemplo, /libros?page=1)
+        // Obtener el número de página desde la consulta
         const page = parseInt(req.query.page) || 1;
-
-        // Calcular el índice de inicio del primer elemento de la página actual
-        const startIndex = (page - 1) * PAGE_SIZE;
 
         // Obtener el usuario actual con sus libros
         const usuario = await usuarios.findOne({ _id: req.user.id });
-
+        
         if (!usuario) {
             return res.status(404).json({
                 error: true,
@@ -38,14 +35,27 @@ router.get('/libros', async (req, res) => {
             });
         }
 
-        // Invertir el array de libros para que los más recientes estén primero
-        const librosInvertidos = [...usuario.libros].reverse(); 
+        // Normalizar fechas y seleccionar solo los campos necesarios de cada libro
+        const librosNormalizados = usuario.libros.map(libro => ({
+            id: libro._id || libro.id, // dependiendo de cómo lo tengas en tu schema
+            titulo: libro.titulo,
+            autor: libro.autor,
+            fecha: libro.fecha ? new Date(libro.fecha) : new Date(0),
+            genero: libro.genero,
+            descripcion: libro.descripcion
+        }));
+
+        // Ordenar los libros por fecha de lectura (más reciente primero)
+        const librosOrdenados = librosNormalizados.sort((a, b) => b.fecha - a.fecha);
 
         // Obtener el total de libros del usuario
-        const totalLibros = librosInvertidos.length;
+        const totalLibros = librosOrdenados.length;
 
-        // Aplicar paginación manualmente sobre el array invertido
-        const librosPaginados = librosInvertidos.slice(startIndex, startIndex + PAGE_SIZE);
+        // Calcular el índice de inicio del primer elemento de la página actual
+        const startIndex = (page - 1) * PAGE_SIZE;
+
+        // Aplicar paginación sobre el array ordenado
+        const librosPaginados = librosOrdenados.slice(startIndex, startIndex + PAGE_SIZE);
 
         // Calcular el número total de páginas
         const totalPages = Math.ceil(totalLibros / PAGE_SIZE);

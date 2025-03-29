@@ -1,5 +1,4 @@
 const router = require('express').Router();
-const validaToken = require('./validate-token');
 const moment = require('moment');
 const Joi = require('@hapi/joi');
 
@@ -17,23 +16,62 @@ const schemaCargaPeliculas = Joi.object({
     descripcion: Joi.string().allow('').optional()
 });
 
-router.get('/peliculas',[validaToken], async (req, res) => {
-    // console.log(req.user)
+router.get('/peliculas', async (req, res) => {
+ 
+    const PAGE_SIZE = 20;
     try {
-        const usuarioID = await usuarios.findOne({_id: req.user.id});
-        // console.log(usuarioID)
-        res.json('200', {
-            usuario: usuarioID.peliculas,
-        })
+        const page = parseInt(req.query.page) || 1;
+        
+        // Verificar y obtener el usuario con sus películas
+        const usuario = await usuarios.findOne({ _id: req.user.id })
+      
+        if (!usuario) {
+            return res.status(404).json({
+                error: true,
+                mensaje: "Usuario no encontrado"
+            });
+        }
+
+        // Normalizar fechas y seleccionar solo los campos necesarios de cada libro
+        const peliculasNormalizados = usuario.peliculas.map(pelicula => ({
+            id: pelicula._id || pelicula.id, // dependiendo de cómo lo tengas en tu schema
+            titulo: pelicula.titulo,
+            fecha: pelicula.fecha ? new Date(pelicula.fecha) : new Date(0),
+            director: pelicula.director,
+            descripcion: pelicula.descripcion
+        }));
+
+        // Ordenar las películas por fecha (más reciente primero)
+        const peliculasOrdenados = peliculasNormalizados.sort((a, b) => b.fecha - a.fecha);
+
+        // Obtener el total de películas del usuario
+        const totalPeliculas = peliculasOrdenados.length;
+        
+        // Calcular el índice de inicio para la paginación
+        const startIndex = (page - 1) * PAGE_SIZE;
+
+        // Aplicar paginación
+        const peliculasPaginados = peliculasOrdenados.slice(startIndex, startIndex + PAGE_SIZE);
+
+        // Calcular el número total de páginas
+        const totalPages = Math.ceil(totalPeliculas / PAGE_SIZE);
+       
+        // Responder con los datos paginados
+        res.status(200).json({
+            peliculas: peliculasPaginados,
+            totalPages,
+            currentPage: page,
+            totalPeliculas
+        });
     } catch (error) {
-        res.json('400', {
+        res.status(400).json({
             error: true,
-            mensaje: error
-        })
+            mensaje: error.message
+        });
     }
 });
 
-router.get('/pelicula/:peliculaId', [validaToken], async (req, res) => {
+router.get('/pelicula/:peliculaId', async (req, res) => {
     const userId = req.user.id
     const peliculaId = req.params.peliculaId;
     const { fecha, titulo, director, descripcion } = req.body;
@@ -57,7 +95,7 @@ router.get('/pelicula/:peliculaId', [validaToken], async (req, res) => {
     }
 });
 
-router.get('/pelicula/buscar/:texto', [validaToken], async (req, res) => {
+router.get('/pelicula/buscar/:texto', async (req, res) => {
     const userId = req.user.id;
     const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
 
@@ -86,9 +124,8 @@ router.get('/pelicula/buscar/:texto', [validaToken], async (req, res) => {
     }
 });
 
-router.post('/carga-peliculas',[validaToken], async (req, res) => {
+router.post('/carga-peliculas', async (req, res) => {
     try {
-        // Validar los datos del cuerpo de la solicitud
         const { error } = schemaCargaPeliculas.validate(req.body);
         if (error) {
             return res.status(400).json({
@@ -98,49 +135,40 @@ router.post('/carga-peliculas',[validaToken], async (req, res) => {
         }
 
         const usuarioDB = await usuarios.findOne({_id: req.user.id});
+        const fechaActual = moment().startOf('day');
+        const fechaPelicula = moment(req.body.fecha).startOf('day');
 
-        // Obtener la fecha actual
-        const fechaActual = moment().startOf('day'); // Fecha actual sin la hora
-
-        // Convertir la fecha de la pelicula a un objeto Moment
-        const fechaPelicula = moment(req.body.fecha).startOf('day'); // Fecha del libro sin la hora
-
-        // Verificar si la fecha de la pelicula es posterior al día actual
         if (fechaPelicula.isAfter(fechaActual)) {
             return res.status(400).json({
                 error: true,
-                mensaje: 'La fecha de la pelicula no puede ser posterior al día actual.'
+                mensaje: 'La fecha de la película no puede ser posterior al día actual.'
             });
         }
 
-        // Crear nuev Pelicula
-        const pelicula = new Pelicula({
-            fecha: fechaPelicula.toDate(),
-            titulo: req.body.titulo,
-            director: req.body.director,
-            descripcion: req.body.descripcion
-        });
-        
-        // Agregar la pelicula al array de peliculas del usuario
-        usuarioDB.peliculas.push(pelicula);
+        const nuevaPelicula = new Pelicula({
+                    fecha: fechaPelicula.toDate(),
+                    titulo: req.body.titulo,
+                    director: req.body.director,
+                    descripcion: req.body.descripcion
+                });
 
-         // Guardar los cambios en la base de datos
-         await usuarioDB.save();
+        usuarioDB.peliculas.push(nuevaPelicula);
+        await usuarioDB.save();
         
-        res.json('200', {
-            mensaje: 'Pelicula cargada correctamente'
-        })
+        res.status(200).json({
+            mensaje: 'Película cargada correctamente'
+        });
 
     } catch (error) {
-        console.log(error)
-        res.json('400', {
+        console.log(error);
+        res.status(400).json({
             error: true,
-            mensaje: 'ocurre un error en el server: ', error
-        })
+            mensaje: 'Error en el servidor: ' + error.message
+        });
     }
 });
 
-router.delete('/pelicula/:idPelicula', [validaToken], async (req, res) => {
+router.delete('/pelicula/:idPelicula', async (req, res) => {
     try {
       const usuarioId = req.user.id;
       const peliculaId = req.params.idPelicula;
@@ -175,7 +203,7 @@ router.delete('/pelicula/:idPelicula', [validaToken], async (req, res) => {
     }
 });
 
-router.put('/pelicula/:peliculaId', [validaToken], async (req, res) => {
+router.put('/pelicula/:peliculaId', async (req, res) => {
     const userId = req.user.id
     const peliculaId = req.params.peliculaId;
     const { fecha, titulo, director, descripcion } = req.body;

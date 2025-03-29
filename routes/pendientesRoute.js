@@ -18,14 +18,47 @@ const schemaCargaPendientes = Joi.object({
 });
 
 // FUNCIONANDO
-router.get('/pendientes',[validaToken], async (req, res) => {
-    // console.log(req.user)
+router.get('/pendientes',async (req, res) => {
+
+    const PAGE_SIZE = 20;
     try {
-        const usuarioID = await usuarios.findOne({_id: req.user.id});
-        // console.log(usuarioID)
-        res.json('200', {
-            usuario: usuarioID.pendientes,
-        })
+        const page = parseInt(req.query.page) || 1;
+
+        const usuario = await usuarios.findOne({_id: req.user.id});
+        if (!usuario) {
+            return res.status(404).json({
+                error: true,
+                mensaje: "Usuario no encontrado"
+            });
+        }
+
+        const pendientesNormalizados = usuario.pendientes.map(pendiente => ({
+            id: pendiente._id || pendiente.id, 
+            tipo: pendiente.tipo,
+            titulo: pendiente.titulo,
+            autorDirector: pendiente.autorDirector,
+            descripcion: pendiente.descripcion
+        }));
+
+        // Obtener el total de películas del usuario (sin ordenar)
+        const totalPendientes = pendientesNormalizados.length;
+        
+        // Calcular el índice de inicio para la paginación
+        const startIndex = (page - 1) * PAGE_SIZE;
+
+        // Aplicar paginación directamente al array sin ordenar
+        const pendientesPaginados = pendientesNormalizados.slice(startIndex, startIndex + PAGE_SIZE);
+
+        // Calcular el número total de páginas
+        const totalPages = Math.ceil(totalPendientes / PAGE_SIZE);
+
+        // Responder con los datos paginados
+        res.status(200).json({
+            pendientes: pendientesPaginados,
+            totalPages,
+            currentPage: page,
+            totalPendientes
+        });
     } catch (error) {
         res.json('400', {
             error: true,
@@ -35,7 +68,7 @@ router.get('/pendientes',[validaToken], async (req, res) => {
 });
 
 // Busca pendiente cuando clickeas. Para despues editarlo o eliminarlo. FUNCIONANDO
-router.get('/pendiente/:pendienteId', [validaToken], async (req, res) => {
+router.get('/pendiente/:pendienteId', async (req, res) => {
     const userId = req.user.id
     const pendienteId = req.params.pendienteId;
     const { titulo, autorDirector, descripcion } = req.body;
@@ -60,7 +93,7 @@ router.get('/pendiente/:pendienteId', [validaToken], async (req, res) => {
 });
 
 // FUNCIONANDO
-router.post('/carga-pendientes', [validaToken], async (req, res) => {
+router.post('/carga-pendientes', async (req, res) => {
     try {
         // Validar los datos del cuerpo de la solicitud
         const { error } = schemaCargaPendientes.validate(req.body);
@@ -97,7 +130,7 @@ router.post('/carga-pendientes', [validaToken], async (req, res) => {
 });
 
 // FUNCIONANDO
-router.delete('/pendiente/:idPendiente', [validaToken], async (req, res) => {
+router.delete('/pendiente/:idPendiente', async (req, res) => {
     try {
       const usuarioId = req.user.id;
       const pendienteId = req.params.idPendiente;
@@ -133,7 +166,7 @@ router.delete('/pendiente/:idPendiente', [validaToken], async (req, res) => {
 });
 
 // FUNCIONANDO
-router.put('/pendiente/:pendienteId', [validaToken], async (req, res) => {
+router.put('/pendiente/:pendienteId', async (req, res) => {
     const userId = req.user.id
     const pendienteId = req.params.pendienteId;
     const { titulo, autorDirector, descripcion } = req.body;
@@ -175,7 +208,7 @@ router.put('/pendiente/:pendienteId', [validaToken], async (req, res) => {
 
 // Analizar despues si vale la pena poner un buscador aca
 
-router.get('/pendiente/buscar/:texto', [validaToken], async (req, res) => {
+router.get('/pendiente/buscar/:texto', async (req, res) => {
     const userId = req.user.id;
     const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
 
