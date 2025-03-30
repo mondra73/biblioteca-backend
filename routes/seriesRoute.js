@@ -41,23 +41,23 @@ router.get('/series', async (req, res) => {
         }));
 
         // Ordenar las películas por fecha (más reciente primero)
-        const seriesOrdenados = seriesNormalizados.sort((a, b) => b.fecha - a.fecha);
+        const seriesOrdenadas = seriesNormalizados.sort((a, b) => b.fecha - a.fecha);
 
         // Obtener el total de películas del usuario
-        const totalSeries = seriesOrdenados.length;
+        const totalSeries = seriesOrdenadas.length;
         
         // Calcular el índice de inicio para la paginación
         const startIndex = (page - 1) * PAGE_SIZE;
 
         // Aplicar paginación
-        const seriesPaginados = seriesOrdenados.slice(startIndex, startIndex + PAGE_SIZE);
+        const seriesPaginadas = seriesOrdenadas.slice(startIndex, startIndex + PAGE_SIZE);
 
         // Calcular el número total de páginas
         const totalPages = Math.ceil(totalSeries / PAGE_SIZE);
 
         // Responder con los datos paginados
         res.status(200).json({
-            series: seriesPaginados,
+            series: seriesPaginadas,
             totalPages,
             currentPage: page,
             totalSeries
@@ -95,8 +95,10 @@ router.get('/serie/:serieId', async (req, res) => {
 });
 
 router.get('/serie/buscar/:texto', async (req, res) => {
+    const PAGE_SIZE = 20; 
     const userId = req.user.id;
-    const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
+    const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); 
+    const page = parseInt(req.query.page) || 1; // Obtenemos el número de página
 
     try {
         // Verificar si el usuario existe
@@ -105,17 +107,48 @@ router.get('/serie/buscar/:texto', async (req, res) => {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        // Buscar la serie por su título o director (ignorando mayúsculas y minúsculas) de manera parcial
+        // Buscar libros que coincidan con el texto
         const seriesEncontradas = user.series.filter(serie => {
-            return serie.titulo.toLowerCase().includes(texto) || serie.director.toLowerCase().includes(texto) || serie.descripcion.toLowerCase().includes(texto);
+            return (
+                serie.titulo.toLowerCase().includes(texto) || 
+                serie.director.toLowerCase().includes(texto) || 
+                serie.descripcion.toLowerCase().includes(texto)
+            );
         });
 
         if (seriesEncontradas.length === 0) {
-            return res.status(404).json({ message: 'No se encontraron series con ese título o director' });
+            return res.status(404).json({ 
+                error: true,
+                mensaje: 'No se encontraron libros que coincidan con la búsqueda' 
+            });
         }
 
-        // Si se encuentran series, devolverlos como respuesta
-        res.status(200).json(seriesEncontradas);
+        // Normalizar fechas como en el otro endpoint
+        const seriesNormalizadas = seriesEncontradas.map(serie => ({
+            id: serie._id || serie.id,
+            fecha: serie.fecha ? new Date(serie.fecha) : new Date(0),
+            titulo: serie.titulo,
+            director: serie.director,
+            descripcion: serie.descripcion
+        }));
+
+        // Ordenar por fecha (más reciente primero)
+        const seriesOrdenadas = seriesNormalizadas.sort((a, b) => b.fecha - a.fecha);
+
+        // Aplicar paginación
+        const startIndex = (page - 1) * PAGE_SIZE;
+        const seriesPaginadas = seriesOrdenadas.slice(startIndex, startIndex + PAGE_SIZE);
+        const totalSeries = seriesOrdenadas.length;
+        const totalPages = Math.ceil(totalSeries / PAGE_SIZE);
+
+        // Responder con la estructura similar al otro endpoint
+        res.status(200).json({
+            series: seriesPaginadas,
+            totalPages,
+            currentPage: page,
+            totalSeries,
+            textoBuscado: texto // Opcional: para que el cliente sepa qué se buscó
+        });
 
     } catch (error) {
         console.log(error);

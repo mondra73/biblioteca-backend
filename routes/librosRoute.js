@@ -77,7 +77,7 @@ router.get('/libros', async (req, res) => {
 
 //aca tambien paginacion
 router.get('/libro/buscar/:texto', async (req, res) => {
-    const PAGE_SIZE = 20; // Mantenemos el mismo tamaño de página que en el otro endpoint
+    const PAGE_SIZE = 20; 
     const userId = req.user.id;
     const texto = req.params.texto.toLowerCase().replace(/_/g, ' ');
     const page = parseInt(req.query.page) || 1; // Obtenemos el número de página
@@ -101,7 +101,6 @@ router.get('/libro/buscar/:texto', async (req, res) => {
                 libro.descripcion.toLowerCase().includes(texto)
             );
         });
-
         if (librosEncontrados.length === 0) {
             return res.status(404).json({ 
                 error: true,

@@ -96,8 +96,10 @@ router.get('/pelicula/:peliculaId', async (req, res) => {
 });
 
 router.get('/pelicula/buscar/:texto', async (req, res) => {
+    const PAGE_SIZE = 20; 
     const userId = req.user.id;
-    const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
+    const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); 
+    const page = parseInt(req.query.page) || 1; // Obtenemos el número de página
 
     try {
         // Verificar si el usuario existe
@@ -106,17 +108,48 @@ router.get('/pelicula/buscar/:texto', async (req, res) => {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        // Buscar la pelicula por su título o director (ignorando mayúsculas y minúsculas) de manera parcial
+        // Buscar libros que coincidan con el texto
         const peliculasEncontradas = user.peliculas.filter(pelicula => {
-            return pelicula.titulo.toLowerCase().includes(texto) || pelicula.director.toLowerCase().includes(texto) || pelicula.descripcion.toLowerCase().includes(texto);
+            return (
+                pelicula.titulo.toLowerCase().includes(texto) || 
+                pelicula.director.toLowerCase().includes(texto) || 
+                pelicula.descripcion.toLowerCase().includes(texto)
+            );
         });
 
         if (peliculasEncontradas.length === 0) {
-            return res.status(404).json({ message: 'No se encontraron peliculas con ese título o director' });
+            return res.status(404).json({ 
+                error: true,
+                mensaje: 'No se encontraron libros que coincidan con la búsqueda' 
+            });
         }
 
-        // Si se encuentran peliculas, devolverlos como respuesta
-        res.status(200).json(peliculasEncontradas);
+        // Normalizar fechas como en el otro endpoint
+        const peliculasNormalizadas = peliculasEncontradas.map(pelicula => ({
+            id: pelicula._id || pelicula.id,
+            fecha: pelicula.fecha ? new Date(pelicula.fecha) : new Date(0),
+            titulo: pelicula.titulo,
+            director: pelicula.director,
+            descripcion: pelicula.descripcion
+        }));
+
+        // Ordenar por fecha (más reciente primero)
+        const peliculasOrdenadas = peliculasNormalizadas.sort((a, b) => b.fecha - a.fecha);
+
+        // Aplicar paginación
+        const startIndex = (page - 1) * PAGE_SIZE;
+        const peliculasPaginadas = peliculasOrdenadas.slice(startIndex, startIndex + PAGE_SIZE);
+        const totalPeliculas = peliculasOrdenadas.length;
+        const totalPages = Math.ceil(totalPeliculas / PAGE_SIZE);
+
+        // Responder con la estructura similar al otro endpoint
+        res.status(200).json({
+            peliculas: peliculasPaginadas,
+            totalPages,
+            currentPage: page,
+            totalPeliculas,
+            textoBuscado: texto // Opcional: para que el cliente sepa qué se buscó
+        });
 
     } catch (error) {
         console.log(error);
