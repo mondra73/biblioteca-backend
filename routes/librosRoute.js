@@ -77,31 +77,72 @@ router.get('/libros', async (req, res) => {
 
 //aca tambien paginacion
 router.get('/libro/buscar/:texto', async (req, res) => {
+    const PAGE_SIZE = 20; // Mantenemos el mismo tamaño de página que en el otro endpoint
     const userId = req.user.id;
-    const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
+    const texto = req.params.texto.toLowerCase().replace(/_/g, ' ');
+    const page = parseInt(req.query.page) || 1; // Obtenemos el número de página
 
     try {
         // Verificar si el usuario existe
         const user = await usuarios.findById(userId);
         if (!user) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
+            return res.status(404).json({ 
+                error: true,
+                mensaje: 'Usuario no encontrado' 
+            });
         }
 
-        // Buscar el libro por su título o autor (ignorando mayúsculas y minúsculas) de manera parcial
+        // Buscar libros que coincidan con el texto
         const librosEncontrados = user.libros.filter(libro => {
-            return libro.titulo.toLowerCase().includes(texto) || libro.autor.toLowerCase().includes(texto) || libro.genero.toLowerCase().includes(texto) || libro.descripcion.toLowerCase().includes(texto);
+            return (
+                libro.titulo.toLowerCase().includes(texto) || 
+                libro.autor.toLowerCase().includes(texto) || 
+                libro.genero.toLowerCase().includes(texto) || 
+                libro.descripcion.toLowerCase().includes(texto)
+            );
         });
 
         if (librosEncontrados.length === 0) {
-            return res.status(404).json({ message: 'No se encontraron libros con ese título o autor' });
+            return res.status(404).json({ 
+                error: true,
+                mensaje: 'No se encontraron libros que coincidan con la búsqueda' 
+            });
         }
 
-        // Si se encuentran libros, devolverlos como respuesta
-        res.status(200).json(librosEncontrados);
+        // Normalizar fechas como en el otro endpoint
+        const librosNormalizados = librosEncontrados.map(libro => ({
+            id: libro._id || libro.id,
+            titulo: libro.titulo,
+            autor: libro.autor,
+            fecha: libro.fecha ? new Date(libro.fecha) : new Date(0),
+            genero: libro.genero,
+            descripcion: libro.descripcion
+        }));
+
+        // Ordenar por fecha (más reciente primero)
+        const librosOrdenados = librosNormalizados.sort((a, b) => b.fecha - a.fecha);
+
+        // Aplicar paginación
+        const startIndex = (page - 1) * PAGE_SIZE;
+        const librosPaginados = librosOrdenados.slice(startIndex, startIndex + PAGE_SIZE);
+        const totalLibros = librosOrdenados.length;
+        const totalPages = Math.ceil(totalLibros / PAGE_SIZE);
+
+        // Responder con la estructura similar al otro endpoint
+        res.status(200).json({
+            libros: librosPaginados,
+            totalPages,
+            currentPage: page,
+            totalLibros,
+            textoBuscado: texto // Opcional: para que el cliente sepa qué se buscó
+        });
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({ message: 'Error interno del servidor' });
+        res.status(500).json({ 
+            error: true,
+            mensaje: error.message || 'Error interno del servidor' 
+        });
     }
 });
 
@@ -209,7 +250,7 @@ router.delete('/libro/:idLibro', async (req, res) => {
       console.error(error);
       res.status(500).json({ mensaje: 'Error del servidor' });
     }
-  });
+});
 
 router.put('/libro/:libroId', async (req, res) => {
     const userId = req.user.id
