@@ -279,5 +279,8 @@ function generarToken() {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
+router.get('/ping', (req, res) => {
+  res.status(200).json({ mensaje: 'ok' });
+});
 
 module.exports = router;
