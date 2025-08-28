@@ -1,287 +1,314 @@
-const router = require('express').Router();
-const moment = require('moment');
-const Joi = require('@hapi/joi');
+const router = require("express").Router();
+const moment = require("moment");
+const Joi = require("@hapi/joi");
 
-const usuarios = require('../models/Users');
-const Pelicula = require('../models/peliculas');
+const usuarios = require("../models/Users");
+const Pelicula = require("../models/peliculas");
 
 const schemaCargaPeliculas = Joi.object({
-    fecha: Joi.date().required().messages({
-        'any.required': 'La fecha es obligatoria.'
-    }),
-    titulo: Joi.string().required().messages({
-        'any.required': 'El título es obligatorio.'
-    }),
-    director: Joi.string().allow('').optional(),
-    descripcion: Joi.string().allow('').optional()
+  fecha: Joi.date().required().messages({
+    "any.required": "La fecha es obligatoria.",
+  }),
+  titulo: Joi.string().required().messages({
+    "any.required": "El título es obligatorio.",
+  }),
+  director: Joi.string().allow("").optional(),
+  descripcion: Joi.string().allow("").optional(),
 });
 
-router.get('/peliculas', async (req, res) => {
- 
-    const PAGE_SIZE = 20;
-    try {
-        const page = parseInt(req.query.page) || 1;
-        
-        // Verificar y obtener el usuario con sus películas
-        const usuario = await usuarios.findOne({ _id: req.user.id })
-      
-        if (!usuario) {
-            return res.status(404).json({
-                error: true,
-                mensaje: "Usuario no encontrado"
-            });
-        }
+router.get("/peliculas", async (req, res) => {
+  const PAGE_SIZE = 20;
+  try {
+    const page = parseInt(req.query.page) || 1;
 
-        // Normalizar fechas y seleccionar solo los campos necesarios de cada libro
-        const peliculasNormalizados = usuario.peliculas.map(pelicula => ({
-            id: pelicula._id || pelicula.id, // dependiendo de cómo lo tengas en tu schema
-            titulo: pelicula.titulo,
-            fecha: pelicula.fecha ? new Date(pelicula.fecha) : new Date(0),
-            director: pelicula.director,
-            descripcion: pelicula.descripcion
-        }));
+    // Verificar y obtener el usuario con sus películas
+    const usuario = await usuarios.findOne({ _id: req.user.id });
 
-        // Ordenar las películas por fecha (más reciente primero)
-        const peliculasOrdenados = peliculasNormalizados.sort((a, b) => b.fecha - a.fecha);
+    if (!usuario) {
+      return res.status(404).json({
+        error: true,
+        mensaje: "Usuario no encontrado",
+      });
+    }
 
-        // Obtener el total de películas del usuario
-        const totalPeliculas = peliculasOrdenados.length;
-        
-        // Calcular el índice de inicio para la paginación
-        const startIndex = (page - 1) * PAGE_SIZE;
+    // Normalizar fechas y seleccionar solo los campos necesarios de cada libro
+    const peliculasNormalizados = usuario.peliculas.map((pelicula) => ({
+      id: pelicula._id || pelicula.id, // dependiendo de cómo lo tengas en tu schema
+      titulo: pelicula.titulo,
+      fecha: pelicula.fecha ? new Date(pelicula.fecha) : new Date(0),
+      director: pelicula.director,
+      descripcion: pelicula.descripcion,
+    }));
 
-        // Aplicar paginación
-        const peliculasPaginados = peliculasOrdenados.slice(startIndex, startIndex + PAGE_SIZE);
+    // Ordenar las películas por fecha (más reciente primero)
+    const peliculasOrdenados = peliculasNormalizados.sort(
+      (a, b) => b.fecha - a.fecha
+    );
 
-        // Calcular el número total de páginas
-        const totalPages = Math.ceil(totalPeliculas / PAGE_SIZE);
-       
-        // Responder con los datos paginados
-        res.status(200).json({
-            peliculas: peliculasPaginados,
-            totalPages,
-            currentPage: page,
-            totalPeliculas
-        });
-    } catch (error) {
-        res.status(400).json({
-            error: true,
-            mensaje: error.message
+    // Obtener el total de películas del usuario
+    const totalPeliculas = peliculasOrdenados.length;
+
+    // Calcular el índice de inicio para la paginación
+    const startIndex = (page - 1) * PAGE_SIZE;
+
+    // Aplicar paginación
+    const peliculasPaginados = peliculasOrdenados.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    );
+
+    // Calcular el número total de páginas
+    const totalPages = Math.ceil(totalPeliculas / PAGE_SIZE);
+
+    // Responder con los datos paginados
+    res.status(200).json({
+      peliculas: peliculasPaginados,
+      totalPages,
+      currentPage: page,
+      totalPeliculas,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: true,
+      mensaje: error.message,
+    });
+  }
+});
+
+router.get("/pelicula/:peliculaId", async (req, res) => {
+  const userId = req.user.id;
+  const peliculaId = req.params.peliculaId;
+  const { fecha, titulo, director, descripcion } = req.body;
+
+  try {
+    // Verificar si el usuario existe
+    const user = await usuarios.findOne({ _id: userId });
+    if (!user) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    const pelicula = user.peliculas.find(
+      (pelicula) => pelicula._id.toString() === peliculaId
+    );
+    if (!pelicula) {
+      return res
+        .status(404)
+        .json({ error: true, mensaje: "Pelicula no encontrada" });
+    }
+    // Devolver la pelicula encontrado en la respuesta
+    res.json(pelicula);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+
+router.get("/pelicula/buscar/:texto", async (req, res) => {
+  const PAGE_SIZE = 20;
+  const userId = req.user.id;
+  const texto = req.params.texto.toLowerCase().replace(/_/g, " ");
+  const page = parseInt(req.query.page) || 1; // Obtenemos el número de página
+
+  try {
+    // Verificar si el usuario existe
+    const user = await usuarios.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // Buscar libros que coincidan con el texto
+    const peliculasEncontradas = user.peliculas.filter((pelicula) => {
+      return (
+        pelicula.titulo.toLowerCase().includes(texto) ||
+        pelicula.director.toLowerCase().includes(texto) ||
+        pelicula.descripcion.toLowerCase().includes(texto)
+      );
+    });
+
+    if (peliculasEncontradas.length === 0) {
+      return res.status(404).json({
+        error: true,
+        mensaje: "No se encontraron libros que coincidan con la búsqueda",
+      });
+    }
+
+    // Normalizar fechas como en el otro endpoint
+    const peliculasNormalizadas = peliculasEncontradas.map((pelicula) => ({
+      id: pelicula._id || pelicula.id,
+      fecha: pelicula.fecha ? new Date(pelicula.fecha) : new Date(0),
+      titulo: pelicula.titulo,
+      director: pelicula.director,
+      descripcion: pelicula.descripcion,
+    }));
+
+    // Ordenar por fecha (más reciente primero)
+    const peliculasOrdenadas = peliculasNormalizadas.sort(
+      (a, b) => b.fecha - a.fecha
+    );
+
+    // Aplicar paginación
+    const startIndex = (page - 1) * PAGE_SIZE;
+    const peliculasPaginadas = peliculasOrdenadas.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    );
+    const totalPeliculas = peliculasOrdenadas.length;
+    const totalPages = Math.ceil(totalPeliculas / PAGE_SIZE);
+
+    // Responder con la estructura similar al otro endpoint
+    res.status(200).json({
+      peliculas: peliculasPaginadas,
+      totalPages,
+      currentPage: page,
+      totalPeliculas,
+      textoBuscado: texto, // Opcional: para que el cliente sepa qué se buscó
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+
+router.post("/carga-peliculas", async (req, res) => {
+  try {
+    const { error } = schemaCargaPeliculas.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        error: true,
+        mensaje: error.details[0].message,
+      });
+    }
+
+    const usuarioDB = await usuarios.findOne({ _id: req.user.id });
+    const fechaActual = moment().startOf("day");
+    const fechaPelicula = moment(req.body.fecha).startOf("day");
+
+    if (fechaPelicula.isAfter(fechaActual)) {
+      return res.status(400).json({
+        error: true,
+        mensaje:
+          "La fecha de la película no puede ser posterior al día actual.",
+      });
+    }
+
+    const nuevaPelicula = new Pelicula({
+      fecha: fechaPelicula.toDate(),
+      titulo: req.body.titulo,
+      director: req.body.director,
+      descripcion: req.body.descripcion,
+    });
+
+    usuarioDB.peliculas.push(nuevaPelicula);
+    await usuarioDB.save();
+
+    res.status(200).json({
+      mensaje: "Película cargada correctamente",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      error: true,
+      mensaje: "Error en el servidor: " + error.message,
+    });
+  }
+});
+
+router.delete("/pelicula/:idPelicula", async (req, res) => {
+  try {
+    const usuarioId = req.user.id;
+    const peliculaId = req.params.idPelicula;
+
+    // Buscar al usuario por su ID
+    const usuario = await usuarios.findById(usuarioId);
+
+    // Verificar si el usuario existe
+    if (!usuario) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+
+    // Buscar el índice de la pelicula en el array de peliculas del usuario
+    const indicePelicula = usuario.peliculas.findIndex(
+      (pelicula) => pelicula._id.toString() === peliculaId
+    );
+
+    // Verificar si e la pelicula existe en el array de peliculas del usuario
+    if (indicePelicula === -1) {
+      return res
+        .status(404)
+        .json({ mensaje: "pelicula no encontrada para este usuario" });
+    }
+
+    // Eliminar el pelicula del array de peliculas del usuario
+    usuario.peliculas.splice(indicePelicula, 1);
+
+    // Guardar los cambios en la base de datos
+    await usuario.save();
+
+    // Respuesta exitosa
+    res.json({ mensaje: "Pelicula eliminada correctamente" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ mensaje: "Error del servidor" });
+  }
+});
+
+router.put("/pelicula/:peliculaId", async (req, res) => {
+  const userId = req.user.id;
+  const peliculaId = req.params.peliculaId;
+  const { fecha, titulo, director, descripcion } = req.body;
+
+  try {
+    // Verificar si el usuario existe
+    const user = await usuarios.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // Verificar si la pelicula existe en el array de peliculas del usuario
+    const peliculaIndex = user.peliculas.findIndex(
+      (pelicula) => pelicula._id.toString() === peliculaId
+    );
+    if (peliculaIndex === -1) {
+      return res.status(404).json({ message: "pelicula no encontrado" });
+    }
+
+    // Verificar si se proporciona el título de la pelicula
+    if (!titulo) {
+      return res
+        .status(400)
+        .json({
+          message: "El campo título es obligatorio para editar una pelicula",
         });
     }
-});
 
-router.get('/pelicula/:peliculaId', async (req, res) => {
-    const userId = req.user.id
-    const peliculaId = req.params.peliculaId;
-    const { fecha, titulo, director, descripcion } = req.body;
-
-    try {
-        // Verificar si el usuario existe
-        const user = await usuarios.findOne({ _id: userId });
-        if (!user) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
-        }
-
-        const pelicula = user.peliculas.find(pelicula => pelicula._id.toString() === peliculaId);
-        if (!pelicula) {
-            return res.status(404).json({ error: true, mensaje: 'Pelicula no encontrada' });
-        }
-        // Devolver la pelicula encontrado en la respuesta
-        res.json(pelicula);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error interno del servidor' });
-    }
-});
-
-router.get('/pelicula/buscar/:texto', async (req, res) => {
-    const PAGE_SIZE = 20; 
-    const userId = req.user.id;
-    const texto = req.params.texto.toLowerCase().replace(/_/g, ' '); 
-    const page = parseInt(req.query.page) || 1; // Obtenemos el número de página
-
-    try {
-        // Verificar si el usuario existe
-        const user = await usuarios.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
-        }
-
-        // Buscar libros que coincidan con el texto
-        const peliculasEncontradas = user.peliculas.filter(pelicula => {
-            return (
-                pelicula.titulo.toLowerCase().includes(texto) || 
-                pelicula.director.toLowerCase().includes(texto) || 
-                pelicula.descripcion.toLowerCase().includes(texto)
-            );
-        });
-
-        if (peliculasEncontradas.length === 0) {
-            return res.status(404).json({ 
-                error: true,
-                mensaje: 'No se encontraron libros que coincidan con la búsqueda' 
-            });
-        }
-
-        // Normalizar fechas como en el otro endpoint
-        const peliculasNormalizadas = peliculasEncontradas.map(pelicula => ({
-            id: pelicula._id || pelicula.id,
-            fecha: pelicula.fecha ? new Date(pelicula.fecha) : new Date(0),
-            titulo: pelicula.titulo,
-            director: pelicula.director,
-            descripcion: pelicula.descripcion
-        }));
-
-        // Ordenar por fecha (más reciente primero)
-        const peliculasOrdenadas = peliculasNormalizadas.sort((a, b) => b.fecha - a.fecha);
-
-        // Aplicar paginación
-        const startIndex = (page - 1) * PAGE_SIZE;
-        const peliculasPaginadas = peliculasOrdenadas.slice(startIndex, startIndex + PAGE_SIZE);
-        const totalPeliculas = peliculasOrdenadas.length;
-        const totalPages = Math.ceil(totalPeliculas / PAGE_SIZE);
-
-        // Responder con la estructura similar al otro endpoint
-        res.status(200).json({
-            peliculas: peliculasPaginadas,
-            totalPages,
-            currentPage: page,
-            totalPeliculas,
-            textoBuscado: texto // Opcional: para que el cliente sepa qué se buscó
-        });
-
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Error interno del servidor' });
-    }
-});
-
-router.post('/carga-peliculas', async (req, res) => {
-    try {
-        const { error } = schemaCargaPeliculas.validate(req.body);
-        if (error) {
-            return res.status(400).json({
-                error: true,
-                mensaje: error.details[0].message
-            });
-        }
-
-        const usuarioDB = await usuarios.findOne({_id: req.user.id});
-        const fechaActual = moment().startOf('day');
-        const fechaPelicula = moment(req.body.fecha).startOf('day');
-
-        if (fechaPelicula.isAfter(fechaActual)) {
-            return res.status(400).json({
-                error: true,
-                mensaje: 'La fecha de la película no puede ser posterior al día actual.'
-            });
-        }
-
-        const nuevaPelicula = new Pelicula({
-                    fecha: fechaPelicula.toDate(),
-                    titulo: req.body.titulo,
-                    director: req.body.director,
-                    descripcion: req.body.descripcion
-                });
-
-        usuarioDB.peliculas.push(nuevaPelicula);
-        await usuarioDB.save();
-        
-        res.status(200).json({
-            mensaje: 'Película cargada correctamente'
-        });
-
-    } catch (error) {
-        console.log(error);
-        res.status(400).json({
-            error: true,
-            mensaje: 'Error en el servidor: ' + error.message
-        });
-    }
-});
-
-router.delete('/pelicula/:idPelicula', async (req, res) => {
-    try {
-      const usuarioId = req.user.id;
-      const peliculaId = req.params.idPelicula;
-  
-      // Buscar al usuario por su ID
-      const usuario = await usuarios.findById(usuarioId);
-  
-      // Verificar si el usuario existe
-      if (!usuario) {
-        return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    // Verificar si la fecha de la pelicula es posterior al día actual
+    if (fecha) {
+      const fechaActual = moment().startOf("day");
+      const fechaPelicula = moment(fecha).startOf("day");
+      if (fechaPelicula.isAfter(fechaActual)) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "La fecha de la pelicula no puede ser posterior al día actual",
+          });
       }
-  
-      // Buscar el índice de la pelicula en el array de peliculas del usuario
-      const indicePelicula = usuario.peliculas.findIndex(pelicula => pelicula._id.toString() === peliculaId);
-  
-      // Verificar si e la pelicula existe en el array de peliculas del usuario
-      if (indicePelicula === -1) {
-        return res.status(404).json({ mensaje: 'pelicula no encontrada para este usuario' });
-      }
-  
-      // Eliminar el pelicula del array de peliculas del usuario
-      usuario.peliculas.splice(indicePelicula, 1);
-  
-      // Guardar los cambios en la base de datos
-      await usuario.save();
-  
-      // Respuesta exitosa
-      res.json({ mensaje: 'Pelicula eliminada correctamente' });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ mensaje: 'Error del servidor' });
     }
+
+    // Actualizar los datos del pelicula
+    if (fecha) user.peliculas[peliculaIndex].fecha = fecha;
+    if (titulo) user.peliculas[peliculaIndex].titulo = titulo;
+    if (director) user.peliculas[peliculaIndex].director = director;
+    if (descripcion) user.peliculas[peliculaIndex].descripcion = descripcion;
+
+    // Guardar el usuario actualizado en la base de datos
+    await user.save();
+
+    res.json({ message: "pelicula actualizada correctamente" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
-router.put('/pelicula/:peliculaId', async (req, res) => {
-    const userId = req.user.id
-    const peliculaId = req.params.peliculaId;
-    const { fecha, titulo, director, descripcion } = req.body;
-
-    try {
-        // Verificar si el usuario existe
-        const user = await usuarios.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
-        }
-
-        // Verificar si la pelicula existe en el array de peliculas del usuario
-        const peliculaIndex = user.peliculas.findIndex(pelicula => pelicula._id.toString() === peliculaId);
-        if (peliculaIndex === -1) {
-            return res.status(404).json({ message: 'pelicula no encontrado' });
-        }
-
-        // Verificar si se proporciona el título de la pelicula
-        if (!titulo) {
-            return res.status(400).json({ message: 'El campo título es obligatorio para editar una pelicula' });
-        }
-
-        // Verificar si la fecha de la pelicula es posterior al día actual
-        if (fecha) {
-            const fechaActual = moment().startOf('day');
-            const fechaPelicula = moment(fecha).startOf('day');
-            if (fechaPelicula.isAfter(fechaActual)) {
-                return res.status(400).json({ message: 'La fecha de la pelicula no puede ser posterior al día actual' });
-            }
-        }
-
-        // Actualizar los datos del pelicula
-        if (fecha) user.peliculas[peliculaIndex].fecha = fecha;
-        if (titulo) user.peliculas[peliculaIndex].titulo = titulo;
-        if (director) user.peliculas[peliculaIndex].director = director;
-        if (descripcion) user.peliculas[peliculaIndex].descripcion = descripcion;
-
-        // Guardar el usuario actualizado en la base de datos
-        await user.save();
-
-        res.json({ message: 'pelicula actualizada correctamente' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error interno del servidor' });
-    }
-});
-
-module.exports = router
+module.exports = router;

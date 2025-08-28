@@ -1,12 +1,6 @@
 const router = require('express').Router();
 const validaToken = require('./validate-token');
 const usuarios = require('../models/Users');
-const pendientes = require('../models/pendientes');
-
-const Libro = require('../models/libros'); // Importa el modelo de libros
-const Serie = require('../models/series'); // Importa el modelo de series
-const Pelicula = require('../models/peliculas'); // Importa el modelo de películas
-
 
 // Ruta para obtener estadísticas de libros, series y películas de todos los usuarios
 router.get('/estadisticas', validaToken, async (req, res) => {
