@@ -7,7 +7,7 @@ const app = express();
 // cors
 const cors = require('cors');
 var corsOptions = {
-    origin: '*', // Reemplazar con dominio
+    origin: '*',
     optionsSuccessStatus: 200 
 }
 app.use(cors(corsOptions));
@@ -16,13 +16,15 @@ app.use(cors(corsOptions));
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(bodyparser.json());
 
-// Conexión a Base de datos
-const uri = `mongodb+srv://${process.env.USER}:${process.env.PASSWORD}@cluster0.s3yiw.mongodb.net/${process.env.DBNAME}?retryWrites=true&w=majority`;
-mongoose.connect(uri,
-    { useNewUrlParser: true, useUnifiedTopology: true }
-)
+// Conexión a Base de datos - VERSIÓN SIMPLIFICADA
+const uri = process.env.MONGODB_URI;
+
+mongoose.connect(uri, {
+    useNewUrlParser: true, 
+    useUnifiedTopology: true 
+})
 .then(() => console.log('Base de datos conectada'))
-.catch(e => console.log('error db:', e))
+.catch(e => console.log('Error conectando a la base de datos:', e))
 
 // import routes
 const authRoutes = require('./routes/auth');
@@ -43,14 +45,12 @@ app.use('/api/admin/user', rutasPeliculas);
 app.use('/api/admin/user', rutasPendientes);
 app.use('/api/admin/user', rutasUser);
 
-
 app.get('/', (req, res) => {
     res.json({
         estado: true,
         mensaje: 'funciona!'
     })
 });
-
 
 // iniciar server
 const PORT = process.env.PORT || 3000;
