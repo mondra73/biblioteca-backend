@@ -7,7 +7,11 @@ const app = express();
 // cors
 const cors = require('cors');
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:3000',
+    'https://bibliotecamultimedia.onrender.com'
+  ],
   credentials: true
 }));
 
