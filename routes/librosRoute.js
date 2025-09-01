@@ -6,15 +6,21 @@ const usuarios = require("../models/Users");
 const Libro = require("../models/libros");
 
 const schemaCargaLibros = Joi.object({
-  fecha: Joi.date().required().messages({
-    "any.required": "La fecha es obligatoria.",
+  fecha: Joi.date().required().max('now').messages({
+    'date.max': 'La fecha no puede ser futura'
   }),
   titulo: Joi.string().required().messages({
-    "any.required": "El título es obligatorio.",
+    'string.empty': 'El título es requerido'
   }),
-  autor: Joi.string().allow("").optional(),
-  genero: Joi.string().allow("").optional(),
-  descripcion: Joi.string().allow("").optional(),
+  autor: Joi.string().required().messages({
+    'string.empty': 'El autor es requerido'
+  }),
+  genero: Joi.string().allow('').optional(),
+  descripcion: Joi.string().allow('').optional(),
+  valuacion: Joi.number().integer().min(1).max(5).allow(null).optional().messages({
+    'number.min': 'La valoración debe ser al menos 1',
+    'number.max': 'La valoración no puede ser mayor a 5'
+  })
 });
 
 router.get("/libros", async (req, res) => {
@@ -41,6 +47,7 @@ router.get("/libros", async (req, res) => {
       fecha: libro.fecha ? new Date(libro.fecha) : new Date(0),
       genero: libro.genero,
       descripcion: libro.descripcion,
+      valuacion: libro.valuacion 
     }));
 
     // Ordenar los libros por fecha de lectura (más reciente primero)
@@ -77,7 +84,6 @@ router.get("/libros", async (req, res) => {
     });
   }
 });
-
 
 router.get("/libro/buscar/:texto", async (req, res) => {
   const PAGE_SIZE = 20;
@@ -155,7 +161,6 @@ router.get("/libro/buscar/:texto", async (req, res) => {
 router.get("/libro/:libroId", async (req, res) => {
   const userId = req.user.id;
   const libroId = req.params.libroId;
-  const { fecha, titulo, autor, genero, descripcion } = req.body;
 
   try {
     // Verificar si el usuario existe
@@ -170,8 +175,16 @@ router.get("/libro/:libroId", async (req, res) => {
         .status(404)
         .json({ error: true, mensaje: "Libro no encontrado" });
     }
-    // Devolver el libro encontrado en la respuesta
-    res.json(libro);
+    
+    res.json({
+      id: libro._id,
+      titulo: libro.titulo,
+      autor: libro.autor,
+      fecha: libro.fecha,
+      genero: libro.genero,
+      descripcion: libro.descripcion,
+      valuacion: libro.valuacion 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error interno del servidor" });
@@ -206,6 +219,7 @@ router.post("/carga-libros", async (req, res) => {
       autor: req.body.autor,
       genero: req.body.genero,
       descripcion: req.body.descripcion,
+      valuacion: req.body.valuacion || null
     });
 
     usuarioDB.libros.push(libro);
@@ -265,7 +279,7 @@ router.delete("/libro/:idLibro", async (req, res) => {
 router.put("/libro/:libroId", async (req, res) => {
   const userId = req.user.id;
   const libroId = req.params.libroId;
-  const { fecha, titulo, autor, genero, descripcion } = req.body;
+  const { fecha, titulo, autor, genero, descripcion, valuacion } = req.body; // Agregar valuacion
 
   try {
     // Verificar si el usuario existe
@@ -284,11 +298,9 @@ router.put("/libro/:libroId", async (req, res) => {
 
     // Verificar si se proporciona el título del libro
     if (!titulo) {
-      return res
-        .status(400)
-        .json({
-          message: "El campo título es obligatorio para editar un libro",
-        });
+      return res.status(400).json({
+        message: "El campo título es obligatorio para editar un libro",
+      });
     }
 
     // Verificar si la fecha del libro es posterior al día actual
@@ -296,12 +308,17 @@ router.put("/libro/:libroId", async (req, res) => {
       const fechaActual = moment().startOf("day");
       const fechaLibro = moment(fecha).startOf("day");
       if (fechaLibro.isAfter(fechaActual)) {
-        return res
-          .status(400)
-          .json({
-            message: "La fecha del libro no puede ser posterior al día actual",
-          });
+        return res.status(400).json({
+          message: "La fecha del libro no puede ser posterior al día actual",
+        });
       }
+    }
+
+    // Validar valoración si está presente
+    if (valuacion !== undefined && (valuacion < 1 || valuacion > 5)) {
+      return res.status(400).json({
+        message: "La valoración debe estar entre 1 y 5",
+      });
     }
 
     // Actualizar los datos del libro
@@ -310,6 +327,7 @@ router.put("/libro/:libroId", async (req, res) => {
     if (autor) user.libros[libroIndex].autor = autor;
     if (genero) user.libros[libroIndex].genero = genero;
     if (descripcion) user.libros[libroIndex].descripcion = descripcion;
+    if (valuacion !== undefined) user.libros[libroIndex].valuacion = valuacion; // Agregar valuacion
 
     // Guardar el usuario actualizado en la base de datos
     await user.save();

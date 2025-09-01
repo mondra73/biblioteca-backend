@@ -6,11 +6,10 @@ const app = express();
 
 // cors
 const cors = require('cors');
-var corsOptions = {
-    origin: '*',
-    optionsSuccessStatus: 200 
-}
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+}));
 
 // capturar body
 app.use(bodyparser.urlencoded({ extended: false }));
@@ -39,11 +38,11 @@ const rutasUser = require('./routes/userRoute');
 // route middlewares
 app.use('/api/user', authRoutes);
 app.use('/api/admin', validaToken, admin);
-app.use('/api/admin/user', rutasLibros);
-app.use('/api/admin/user', rutasSeries);
-app.use('/api/admin/user', rutasPeliculas);
-app.use('/api/admin/user', rutasPendientes);
-app.use('/api/admin/user', rutasUser);
+app.use('/api/admin/user', validaToken, rutasLibros);
+app.use('/api/admin/user', validaToken, rutasSeries);
+app.use('/api/admin/user', validaToken, rutasPeliculas);
+app.use('/api/admin/user', validaToken, rutasPendientes);
+app.use('/api/admin/user', validaToken, rutasUser);
 
 app.get('/', (req, res) => {
     res.json({
