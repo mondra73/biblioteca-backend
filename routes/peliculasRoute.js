@@ -14,6 +14,10 @@ const schemaCargaPeliculas = Joi.object({
   }),
   director: Joi.string().allow("").optional(),
   descripcion: Joi.string().allow("").optional(),
+  valuacion: Joi.number().integer().min(1).max(5).allow(null).optional().messages({
+    'number.min': 'La valoración debe ser al menos 1',
+    'number.max': 'La valoración no puede ser mayor a 5'
+  })
 });
 
 router.get("/peliculas", async (req, res) => {
@@ -31,13 +35,14 @@ router.get("/peliculas", async (req, res) => {
       });
     }
 
-    // Normalizar fechas y seleccionar solo los campos necesarios de cada libro
+    // Normalizar fechas y seleccionar solo los campos necesarios de cada película
     const peliculasNormalizados = usuario.peliculas.map((pelicula) => ({
-      id: pelicula._id || pelicula.id, // dependiendo de cómo lo tengas en tu schema
+      id: pelicula._id || pelicula.id,
       titulo: pelicula.titulo,
       fecha: pelicula.fecha ? new Date(pelicula.fecha) : new Date(0),
       director: pelicula.director,
       descripcion: pelicula.descripcion,
+      valuacion: pelicula.valuacion // ← AÑADIR ESTA LÍNEA
     }));
 
     // Ordenar las películas por fecha (más reciente primero)
@@ -45,19 +50,14 @@ router.get("/peliculas", async (req, res) => {
       (a, b) => b.fecha - a.fecha
     );
 
-    // Obtener el total de películas del usuario
     const totalPeliculas = peliculasOrdenados.length;
-
-    // Calcular el índice de inicio para la paginación
     const startIndex = (page - 1) * PAGE_SIZE;
 
-    // Aplicar paginación
     const peliculasPaginados = peliculasOrdenados.slice(
       startIndex,
       startIndex + PAGE_SIZE
     );
 
-    // Calcular el número total de páginas
     const totalPages = Math.ceil(totalPeliculas / PAGE_SIZE);
 
     // Responder con los datos paginados
@@ -139,6 +139,7 @@ router.get("/pelicula/buscar/:texto", async (req, res) => {
       titulo: pelicula.titulo,
       director: pelicula.director,
       descripcion: pelicula.descripcion,
+      valuacion: pelicula.valuacion,
     }));
 
     // Ordenar por fecha (más reciente primero)
@@ -196,6 +197,7 @@ router.post("/carga-peliculas", async (req, res) => {
       titulo: req.body.titulo,
       director: req.body.director,
       descripcion: req.body.descripcion,
+      valuacion: req.body.valuacion || null,
     });
 
     usuarioDB.peliculas.push(nuevaPelicula);
@@ -255,7 +257,7 @@ router.delete("/pelicula/:idPelicula", async (req, res) => {
 router.put("/pelicula/:peliculaId", async (req, res) => {
   const userId = req.user.id;
   const peliculaId = req.params.peliculaId;
-  const { fecha, titulo, director, descripcion } = req.body;
+  const { fecha, titulo, director, descripcion, valuacion } = req.body;
 
   try {
     // Verificar si el usuario existe
@@ -300,6 +302,7 @@ router.put("/pelicula/:peliculaId", async (req, res) => {
     if (titulo) user.peliculas[peliculaIndex].titulo = titulo;
     if (director) user.peliculas[peliculaIndex].director = director;
     if (descripcion) user.peliculas[peliculaIndex].descripcion = descripcion;
+    if (valuacion !== undefined) user.peliculas[peliculaIndex].valuacion = valuacion; 
 
     // Guardar el usuario actualizado en la base de datos
     await user.save();

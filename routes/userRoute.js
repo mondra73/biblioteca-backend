@@ -54,7 +54,7 @@ router.get('/estadisticas', validaToken, async (req, res) => {
   }
 });
 
-// Ruta para obtener estadísticas particulares del usuario autenticado
+// Ruta para obtener estadísticas particulares del usucado
 router.get('/estadisticas-user', [validaToken], async (req, res) => {
   try {
     // Obtener el usuario actual autenticado
