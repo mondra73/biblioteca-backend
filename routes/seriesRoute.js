@@ -14,6 +14,10 @@ const schemaCargaSeries = Joi.object({
   }),
   director: Joi.string().allow("").optional(),
   descripcion: Joi.string().allow("").optional(),
+  valuacion: Joi.number().integer().min(1).max(5).allow(null).optional().messages({
+    'number.min': 'La valoración debe ser al menos 1',
+    'number.max': 'La valoración no puede ser mayor a 5'
+  })
 });
 
 router.get("/series", async (req, res) => {
@@ -37,6 +41,7 @@ router.get("/series", async (req, res) => {
       fecha: serie.fecha ? new Date(serie.fecha) : new Date(0),
       director: serie.director,
       descripcion: serie.descripcion,
+      valuacion: serie.valuacion
     }));
 
     // Ordenar las películas por fecha (más reciente primero)
@@ -136,6 +141,7 @@ router.get("/serie/buscar/:texto", async (req, res) => {
       titulo: serie.titulo,
       director: serie.director,
       descripcion: serie.descripcion,
+      valuacion: serie.valuacion,
     }));
 
     // Ordenar por fecha (más reciente primero)
@@ -199,6 +205,7 @@ router.post("/carga-series", async (req, res) => {
       titulo: req.body.titulo,
       director: req.body.director,
       descripcion: req.body.descripcion,
+      valuacion: req.body.valuacion || null,
     });
 
     // Agregar la serie al array de series del usuario
@@ -261,7 +268,7 @@ router.delete("/serie/:idSerie", async (req, res) => {
 router.put("/serie/:serieId", async (req, res) => {
   const userId = req.user.id;
   const serieId = req.params.serieId;
-  const { fecha, titulo, director, descripcion } = req.body;
+  const { fecha, titulo, director, descripcion, valuacion } = req.body;
 
   try {
     // Verificar si el usuario existe
@@ -306,6 +313,7 @@ router.put("/serie/:serieId", async (req, res) => {
     if (titulo) user.series[serieIndex].titulo = titulo;
     if (director) user.series[serieIndex].director = director;
     if (descripcion) user.series[serieIndex].descripcion = descripcion;
+    if (valuacion !== undefined) user.series[serieIndex].valuacion = valuacion;
 
     // Guardar el usuario actualizado en la base de datos
     await user.save();
