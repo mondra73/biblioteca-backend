@@ -70,7 +70,6 @@ router.get("/pendientes", async (req, res) => {
 router.get("/pendiente/:pendienteId", async (req, res) => {
   const userId = req.user.id;
   const pendienteId = req.params.pendienteId;
-  const { titulo, autorDirector, descripcion } = req.body;
 
   try {
     // Verificar si el usuario existe
@@ -82,13 +81,26 @@ router.get("/pendiente/:pendienteId", async (req, res) => {
     const pendiente = user.pendientes.find(
       (pendiente) => pendiente._id.toString() === pendienteId
     );
+
     if (!pendiente) {
       return res
         .status(404)
         .json({ error: true, mensaje: "Pendiente no encontrado" });
-    }
+      }
+
     // Devolver el pendiente encontrado en la respuesta
-    res.json(pendiente);
+    res.json({
+      _id: pendiente._id,
+      titulo: pendiente.titulo,
+      autorDirector: pendiente.autorDirector, // Este campo es importante
+      descripcion: pendiente.descripcion,
+      tipo: pendiente.tipo,
+      confirma: pendiente.confirma,
+      // Remover prioridad si existe
+      fecha_agregado: pendiente.fecha_agregado || new Date().toISOString(),
+      genero: pendiente.genero || '',
+      notas: pendiente.notas || ''
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error interno del servidor" });
