@@ -1,49 +1,56 @@
 const router = require('express').Router();
-const validaToken = require('./validate-token');
 const usuarios = require('../models/Users');
 
-// Ruta para obtener estadísticas de libros, series y películas de todos los usuarios
-router.get('/estadisticas', validaToken, async (req, res) => {
+// Usuarios que estan primeros en cada una de las categorias (Nombre y cantidad)
+router.get('/estadisticas', async (req, res) => {
   try {
     // Obtener todos los usuarios
-    const allUsers = await usuarios.find(); // Cambié el nombre de la variable
+    const allUsers = await usuarios.find();
 
-    // Calcular estadísticas para cada usuario y encontrar los máximos
-    let maxLibros = 0, maxSeries = 0, maxPeliculas = 0;
-    let usuarioMasLibros = { nombre: '', cantidad: 0 };
-    let usuarioMasSeries = { nombre: '', cantidad: 0 };
-    let usuarioMasPeliculas = { nombre: '', cantidad: 0 };
+    // Arrays para almacenar los top 3 de cada categoría
+    let topLibros = [];
+    let topSeries = [];
+    let topPeliculas = [];
 
+    // Calcular estadísticas para cada usuario
     allUsers.forEach(usuario => {
       const numLibros = usuario.libros ? usuario.libros.length : 0;
       const numSeries = usuario.series ? usuario.series.length : 0;
       const numPeliculas = usuario.peliculas ? usuario.peliculas.length : 0;
 
-      if (numLibros > maxLibros) {
-        maxLibros = numLibros;
-        usuarioMasLibros = { nombre: usuario.name, cantidad: numLibros };
+      // Agregar a los arrays correspondientes
+      if (numLibros > 0) {
+        topLibros.push({ nombre: usuario.name, cantidad: numLibros });
       }
-
-      if (numSeries > maxSeries) {
-        maxSeries = numSeries;
-        usuarioMasSeries = { nombre: usuario.name, cantidad: numSeries };
+      if (numSeries > 0) {
+        topSeries.push({ nombre: usuario.name, cantidad: numSeries });
       }
-
-      if (numPeliculas > maxPeliculas) {
-        maxPeliculas = numPeliculas;
-        usuarioMasPeliculas = { nombre: usuario.name, cantidad: numPeliculas };
+      if (numPeliculas > 0) {
+        topPeliculas.push({ nombre: usuario.name, cantidad: numPeliculas });
       }
     });
+
+    // Función para ordenar y obtener top 3
+    const obtenerTop3 = (array) => {
+      return array
+        .sort((a, b) => b.cantidad - a.cantidad) // Ordenar descendente
+        .slice(0, 3); // Tomar primeros 3
+    };
+
+    // Obtener los top 3 de cada categoría
+    const top3Libros = obtenerTop3(topLibros);
+    const top3Series = obtenerTop3(topSeries);
+    const top3Peliculas = obtenerTop3(topPeliculas);
 
     // Obtener el número total de usuarios en la base de datos
     const numUsuarios = allUsers.length;
 
-    // Devolver los usuarios con más libros, series y películas
+    // Devolver los top 3 de cada categoría
     res.status(200).json({
-      usuarioMasLibros,
-      usuarioMasSeries,
-      usuarioMasPeliculas,
-      totalUsuarios: numUsuarios // Agregar el número total de usuarios
+      topLibros: top3Libros,
+      topSeries: top3Series,
+      topPeliculas: top3Peliculas,
+      totalUsuarios: numUsuarios
     });
   } catch (error) {
     console.error(error);
@@ -54,8 +61,8 @@ router.get('/estadisticas', validaToken, async (req, res) => {
   }
 });
 
-// Ruta para obtener estadísticas particulares del usucado
-router.get('/estadisticas-user', [validaToken], async (req, res) => {
+// stadisticas personales del usuario
+router.get('/estadisticas-user', async (req, res) => {
   try {
     // Obtener el usuario actual autenticado
     const usuario = await usuarios.findById(req.user.id);
@@ -64,12 +71,14 @@ router.get('/estadisticas-user', [validaToken], async (req, res) => {
     const numLibros = usuario.libros.length;
     const numSeries = usuario.series.length;
     const numPeliculas = usuario.peliculas.length;
+    const numPendientes = usuario.pendientes.length;
 
     // Devolver las estadísticas particulares del usuario
     res.status(200).json({
       libros: numLibros,
       series: numSeries,
       peliculas: numPeliculas,
+      pendientes: numPendientes 
     });
   } catch (error) {
     console.error(error);
@@ -80,7 +89,7 @@ router.get('/estadisticas-user', [validaToken], async (req, res) => {
   }
 });
 
-router.post('/movimiento', [validaToken], async (req, res) => {
+router.post('/movimiento', async (req, res) => {
   
   try {
     const { fecha, titulo, autor, genero, descripcion, pendienteId } = req.body;
