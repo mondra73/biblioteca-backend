@@ -63,203 +63,171 @@ router.get('/estadisticas', async (req, res) => {
 
 // Endpoint nuevos para individualizar las cantidades en los componentes del front
 
-router.get('/estadisticas-libros', async (req, res) => {
+router.get('/estadisticas-libros/:idUsuario', async (req, res) => {
   try {
-    // Obtener todos los usuarios
-    const allUsers = await usuarios.find();
+    const { idUsuario } = req.params;
 
-    // Calcular estadísticas de libros
-    let totalLibros = 0;
-    let topLibros = [];
+    // Buscar al usuario por ID
+    const usuario = await usuarios.findById(idUsuario);
+
+    if (!usuario) {
+      return res.status(404).json({
+        error: true,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    const numLibros = usuario.libros ? usuario.libros.length : 0;
     let sumaRatings = 0;
     let librosConRating = 0;
 
-    allUsers.forEach(usuario => {
-      const numLibros = usuario.libros ? usuario.libros.length : 0;
-      
-      // Sumar al total
-      totalLibros += numLibros;
-      
-      // Agregar al array para top usuarios
-      if (numLibros > 0) {
-        topLibros.push({ 
-          nombre: usuario.name, 
-          cantidad: numLibros,
-          userId: usuario._id // Opcional: incluir ID del usuario
-        });
-      }
-
-      // Calcular suma de ratings y contar libros con rating
-      if (usuario.libros && usuario.libros.length > 0) {
-        usuario.libros.forEach(libro => {
-          if (libro.valuacion !== null && libro.valuacion !== undefined) {
-            sumaRatings += libro.valuacion;
-            librosConRating++;
-          }
-        });
-      }
-    });
+    // Calcular ratings del usuario
+    if (usuario.libros && usuario.libros.length > 0) {
+      usuario.libros.forEach(libro => {
+        if (libro.valuacion !== null && libro.valuacion !== undefined) {
+          sumaRatings += libro.valuacion;
+          librosConRating++;
+        }
+      });
+    }
 
     // Calcular promedio de rating
     let promedioRating = 0;
     if (librosConRating > 0) {
       promedioRating = sumaRatings / librosConRating;
-      // Redondear a 1 decimal
       promedioRating = Math.round(promedioRating * 10) / 10;
     }
 
-    // Obtener top 3 usuarios con más libros
-    const top3Libros = topLibros
-      .sort((a, b) => b.cantidad - a.cantidad)
-      .slice(0, 3);
-
-    // Devolver estadísticas de libros
+    // Respuesta
     res.status(200).json({
-      totalLibros: totalLibros,
-      topUsuarios: top3Libros,
-      totalUsuariosConLibros: topLibros.length,
-      promedioRating: promedioRating
+      usuario: {
+        id: usuario._id,
+        nombre: usuario.name,
+      },
+      totalLibros: numLibros,
+      promedioRating: promedioRating,
+      totalLibrosConRating: librosConRating,
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({
       error: true,
-      mensaje: 'Error al obtener las estadísticas de libros',
+      mensaje: 'Error al obtener las estadísticas del usuario',
     });
   }
 });
 
-router.get('/estadisticas-peliculas', async (req, res) => {
+router.get('/estadisticas-peliculas/:idUsuario', async (req, res) => {
   try {
-    // Obtener todos los usuarios
-    const allUsers = await usuarios.find();
+    const { idUsuario } = req.params;
 
-    // Calcular estadísticas de películas
-    let totalPeliculas = 0;
-    let topPeliculas = [];
+    // Buscar al usuario por ID
+    const usuario = await usuarios.findById(idUsuario);
+
+    if (!usuario) {
+      return res.status(404).json({
+        error: true,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    const numPeliculas = usuario.peliculas ? usuario.peliculas.length : 0;
     let sumaRatings = 0;
     let peliculasConRating = 0;
 
-    allUsers.forEach(usuario => {
-      const numPeliculas = usuario.peliculas ? usuario.peliculas.length : 0;
-      
-      // Sumar al total
-      totalPeliculas += numPeliculas;
-      
-      // Agregar al array para top usuarios
-      if (numPeliculas > 0) {
-        topPeliculas.push({ 
-          nombre: usuario.name, 
-          cantidad: numPeliculas,
-          userId: usuario._id // Opcional: incluir ID del usuario
-        });
-      }
-
-      // Calcular suma de ratings y contar películas con rating
-      if (usuario.peliculas && usuario.peliculas.length > 0) {
-        usuario.peliculas.forEach(pelicula => {
-          if (pelicula.valuacion !== null && pelicula.valuacion !== undefined) {
-            sumaRatings += pelicula.valuacion;
-            peliculasConRating++;
-          }
-        });
-      }
-    });
+    // Calcular ratings del usuario
+    if (usuario.peliculas && usuario.peliculas.length > 0) {
+      usuario.peliculas.forEach(pelicula => {
+        if (pelicula.valuacion !== null && pelicula.valuacion !== undefined) {
+          sumaRatings += pelicula.valuacion;
+          peliculasConRating++;
+        }
+      });
+    }
 
     // Calcular promedio de rating
     let promedioRating = 0;
     if (peliculasConRating > 0) {
       promedioRating = sumaRatings / peliculasConRating;
-      // Redondear a 1 decimal
       promedioRating = Math.round(promedioRating * 10) / 10;
     }
 
-    // Obtener top 3 usuarios con más películas
-    const top3Peliculas = topPeliculas
-      .sort((a, b) => b.cantidad - a.cantidad)
-      .slice(0, 3);
-
-    // Devolver estadísticas de películas
+    // Respuesta
     res.status(200).json({
-      totalPeliculas: totalPeliculas,
-      topUsuarios: top3Peliculas,
-      totalUsuariosConPeliculas: topPeliculas.length,
-      promedioRating: promedioRating
+      usuario: {
+        id: usuario._id,
+        nombre: usuario.name,
+      },
+      totalPeliculas: numPeliculas,
+      promedioRating: promedioRating,
+      totalPeliculasConRating: peliculasConRating,
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({
       error: true,
-      mensaje: 'Error al obtener las estadísticas de películas',
+      mensaje: 'Error al obtener las estadísticas de películas del usuario',
     });
   }
 });
 
-router.get('/estadisticas-series', async (req, res) => {
+router.get('/estadisticas-series/:idUsuario', async (req, res) => {
   try {
-    // Obtener todos los usuarios
-    const allUsers = await usuarios.find();
+    const { idUsuario } = req.params;
 
-    // Calcular estadísticas de series
-    let totalSeries = 0;
-    let topSeries = [];
+    // Buscar al usuario por ID
+    const usuario = await usuarios.findById(idUsuario);
+
+    if (!usuario) {
+      return res.status(404).json({
+        error: true,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    const numSeries = usuario.series ? usuario.series.length : 0;
     let sumaRatings = 0;
     let seriesConRating = 0;
 
-    allUsers.forEach(usuario => {
-      const numSeries = usuario.series ? usuario.series.length : 0;
-      
-      // Sumar al total
-      totalSeries += numSeries;
-      
-      // Agregar al array para top usuarios
-      if (numSeries > 0) {
-        topSeries.push({ 
-          nombre: usuario.name, 
-          cantidad: numSeries,
-          userId: usuario._id // Opcional: incluir ID del usuario
-        });
-      }
-
-      // Calcular suma de ratings y contar series con rating
-      if (usuario.series && usuario.series.length > 0) {
-        usuario.series.forEach(serie => {
-          if (serie.valuacion !== null && serie.valuacion !== undefined) {
-            sumaRatings += serie.valuacion;
-            seriesConRating++;
-          }
-        });
-      }
-    });
+    // Calcular ratings del usuario
+    if (usuario.series && usuario.series.length > 0) {
+      usuario.series.forEach(serie => {
+        if (serie.valuacion !== null && serie.valuacion !== undefined) {
+          sumaRatings += serie.valuacion;
+          seriesConRating++;
+        }
+      });
+    }
 
     // Calcular promedio de rating
     let promedioRating = 0;
     if (seriesConRating > 0) {
       promedioRating = sumaRatings / seriesConRating;
-      // Redondear a 1 decimal
       promedioRating = Math.round(promedioRating * 10) / 10;
     }
 
-    // Obtener top 3 usuarios con más series
-    const top3Series = topSeries
-      .sort((a, b) => b.cantidad - a.cantidad)
-      .slice(0, 3);
-
-    // Devolver estadísticas de series
+    // Respuesta
     res.status(200).json({
-      totalSeries: totalSeries,
-      topUsuarios: top3Series,
-      totalUsuariosConSeries: topSeries.length,
-      promedioRating: promedioRating
+      usuario: {
+        id: usuario._id,
+        nombre: usuario.name,
+      },
+      totalSeries: numSeries,
+      promedioRating: promedioRating,
+      totalSeriesConRating: seriesConRating,
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({
       error: true,
-      mensaje: 'Error al obtener las estadísticas de series',
+      mensaje: 'Error al obtener las estadísticas de series del usuario',
     });
   }
 });
+
 
 //----------------------------------------------------------------
 
