@@ -61,6 +61,145 @@ router.get('/estadisticas', async (req, res) => {
   }
 });
 
+// Endpoint nuevos para individualizar las cantidades en los componentes del front
+
+router.get('/estadisticas-libros', async (req, res) => {
+  try {
+    // Obtener todos los usuarios
+    const allUsers = await usuarios.find();
+
+    // Calcular estadísticas de libros
+    let totalLibros = 0;
+    let topLibros = [];
+
+    allUsers.forEach(usuario => {
+      const numLibros = usuario.libros ? usuario.libros.length : 0;
+      
+      // Sumar al total
+      totalLibros += numLibros;
+      
+      // Agregar al array para top usuarios
+      if (numLibros > 0) {
+        topLibros.push({ 
+          nombre: usuario.name, 
+          cantidad: numLibros,
+          userId: usuario._id // Opcional: incluir ID del usuario
+        });
+      }
+    });
+
+    // Obtener top 3 usuarios con más libros
+    const top3Libros = topLibros
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 3);
+
+    // Devolver estadísticas de libros
+    res.status(200).json({
+      totalLibros: totalLibros,
+      topUsuarios: top3Libros,
+      totalUsuariosConLibros: topLibros.length
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: true,
+      mensaje: 'Error al obtener las estadísticas de libros',
+    });
+  }
+});
+
+router.get('/estadisticas-peliculas', async (req, res) => {
+  try {
+    // Obtener todos los usuarios
+    const allUsers = await usuarios.find();
+
+    // Calcular estadísticas de películas
+    let totalPeliculas = 0;
+    let topPeliculas = [];
+
+    allUsers.forEach(usuario => {
+      const numPeliculas = usuario.peliculas ? usuario.peliculas.length : 0;
+      
+      // Sumar al total
+      totalPeliculas += numPeliculas;
+      
+      // Agregar al array para top usuarios
+      if (numPeliculas > 0) {
+        topPeliculas.push({ 
+          nombre: usuario.name, 
+          cantidad: numPeliculas,
+          userId: usuario._id // Opcional: incluir ID del usuario
+        });
+      }
+    });
+
+    // Obtener top 3 usuarios con más películas
+    const top3Peliculas = topPeliculas
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 3);
+
+    // Devolver estadísticas de películas
+    res.status(200).json({
+      totalPeliculas: totalPeliculas,
+      topUsuarios: top3Peliculas,
+      totalUsuariosConPeliculas: topPeliculas.length
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: true,
+      mensaje: 'Error al obtener las estadísticas de películas',
+    });
+  }
+});
+
+router.get('/estadisticas-series', async (req, res) => {
+  try {
+    // Obtener todos los usuarios
+    const allUsers = await usuarios.find();
+
+    // Calcular estadísticas de series
+    let totalSeries = 0;
+    let topSeries = [];
+
+    allUsers.forEach(usuario => {
+      const numSeries = usuario.series ? usuario.series.length : 0;
+      
+      // Sumar al total
+      totalSeries += numSeries;
+      
+      // Agregar al array para top usuarios
+      if (numSeries > 0) {
+        topSeries.push({ 
+          nombre: usuario.name, 
+          cantidad: numSeries,
+          userId: usuario._id // Opcional: incluir ID del usuario
+        });
+      }
+    });
+
+    // Obtener top 3 usuarios con más series
+    const top3Series = topSeries
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 3);
+
+    // Devolver estadísticas de series
+    res.status(200).json({
+      totalSeries: totalSeries,
+      topUsuarios: top3Series,
+      totalUsuariosConSeries: topSeries.length
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: true,
+      mensaje: 'Error al obtener las estadísticas de series',
+    });
+  }
+});
+
+//----------------------------------------------------------------
+
 // stadisticas personales del usuario
 router.get('/estadisticas-user', async (req, res) => {
   try {
