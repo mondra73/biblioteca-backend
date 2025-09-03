@@ -327,4 +327,6 @@ router.get("/ping", (req, res) => {
   res.status(200).json({ mensaje: "ok" });
 });
 
+//  endpoint de contacto
+
 module.exports = router;
