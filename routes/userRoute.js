@@ -71,6 +71,8 @@ router.get('/estadisticas-libros', async (req, res) => {
     // Calcular estadísticas de libros
     let totalLibros = 0;
     let topLibros = [];
+    let sumaRatings = 0;
+    let librosConRating = 0;
 
     allUsers.forEach(usuario => {
       const numLibros = usuario.libros ? usuario.libros.length : 0;
@@ -86,7 +88,25 @@ router.get('/estadisticas-libros', async (req, res) => {
           userId: usuario._id // Opcional: incluir ID del usuario
         });
       }
+
+      // Calcular suma de ratings y contar libros con rating
+      if (usuario.libros && usuario.libros.length > 0) {
+        usuario.libros.forEach(libro => {
+          if (libro.valuacion !== null && libro.valuacion !== undefined) {
+            sumaRatings += libro.valuacion;
+            librosConRating++;
+          }
+        });
+      }
     });
+
+    // Calcular promedio de rating
+    let promedioRating = 0;
+    if (librosConRating > 0) {
+      promedioRating = sumaRatings / librosConRating;
+      // Redondear a 1 decimal
+      promedioRating = Math.round(promedioRating * 10) / 10;
+    }
 
     // Obtener top 3 usuarios con más libros
     const top3Libros = topLibros
@@ -97,7 +117,8 @@ router.get('/estadisticas-libros', async (req, res) => {
     res.status(200).json({
       totalLibros: totalLibros,
       topUsuarios: top3Libros,
-      totalUsuariosConLibros: topLibros.length
+      totalUsuariosConLibros: topLibros.length,
+      promedioRating: promedioRating
     });
   } catch (error) {
     console.error(error);
