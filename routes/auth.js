@@ -7,6 +7,7 @@ const usuarios = require("../models/Users");
 const validaToken = require("./validate-token");
 const enviarEmail = require("./mails");
 const generarEmailBienvenida = require('../email-template/bienvenido');
+const generarEmailRecuperacion = require('../email-template/recuperar-password');
 const rateLimit = require("express-rate-limit");
 
 const customMessages = {
@@ -329,15 +330,19 @@ router.post("/olvido-password", passwordResetLimiter, async (req, res) => {
 
     // Guardar el token y timestamp en la base de datos
     user.token = token;
-    user.tokenCreatedAt = new Date(); // Guardamos la fecha/hora actual
+    user.tokenCreatedAt = new Date();
     await user.save();
 
     const url = process.env.URLUSER;
     const destinatario = user.email;
-    const asunto = "Restablecer contraseña";
-    const texto = `Hola ${user.name}.\n\nHaz clic en el siguiente enlace para restablecer tu contraseña: ${url}/nuevo-password/${encodeURIComponent(destinatario)}/${token}\n\nEste enlace expirará en 1 hora.\n\nSi no solicitaste este restablecimiento, ignora este mensaje.`;
+    const asunto = "Restablecer contraseña - Biblioteca Multimedia";
+    const urlRecuperacion = `${url}/nuevo-password/${encodeURIComponent(destinatario)}/${token}`;
+    
+    // Generar el contenido HTML
+    const htmlContent = generarEmailRecuperacion(user.name, urlRecuperacion);
 
-    enviarEmail(destinatario, asunto, texto);
+    // Enviar email con HTML
+    enviarEmail(destinatario, asunto, htmlContent, true);
 
     res.status(200).json({ 
       message: "Si el email existe, se ha enviado un enlace de restablecimiento" 
