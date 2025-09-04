@@ -8,6 +8,8 @@ const validaToken = require("./validate-token");
 const enviarEmail = require("./mails");
 const generarEmailBienvenida = require('../email-template/bienvenido');
 const generarEmailRecuperacion = require('../email-template/recuperar-password');
+const contactoAdminTemplate = require('../email-template/contacto-admin');
+const contactoUsuarioTemplate = require('../email-template/contacto-usuario')
 const rateLimit = require("express-rate-limit");
 
 const customMessages = {
@@ -394,5 +396,92 @@ router.get("/ping", (req, res) => {
 });
 
 //  endpoint de contacto
+router.post('/contacto', async (req, res) => {
+  try {
+    const { nombre, email, telefono, asunto, mensaje } = req.body;
+
+    // Validaciones básicas
+    if (!nombre || !email || !asunto || !mensaje) {
+      return res.status(400).json({
+        success: false,
+        message: 'Todos los campos obligatorios deben ser completados'
+      });
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Por favor ingresa un email válido'
+      });
+    }
+
+    // Fecha y hora actual
+    const fechaEnvio = new Date().toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Datos para las plantillas
+    const datosContacto = {
+      nombre,
+      email,
+      telefono: telefono || 'No proporcionado',
+      asunto,
+      mensaje,
+      fechaEnvio
+    };
+
+    // 1. Email para el administrador usando tu plantilla contacto-usuario
+    const emailAdminHtml = contactoAdminTemplate(datosContacto);
+
+    // Enviar email al administrador
+    const resultadoAdmin = await enviarEmail(
+      "biblotecamultimedia@gmail.com", // Email del admin
+      `Nuevo mensaje de contacto: ${asunto}`,
+      emailAdminHtml,
+      true // Es HTML
+    );
+
+    if (!resultadoAdmin.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Error al enviar el mensaje. Por favor, intenta nuevamente.'
+      });
+    }
+
+    // 2. Email de confirmación para el usuario usando la nueva plantilla
+    const emailUsuarioHtml = contactoUsuarioTemplate(datosContacto);
+
+    // Enviar confirmación al usuario
+    const resultadoUsuario = await enviarEmail(
+      email,
+      'Confirmación de recepción de mensaje - Entertainment Hub',
+      emailUsuarioHtml,
+      true
+    );
+
+    if (!resultadoUsuario.success) {
+      console.warn('No se pudo enviar email de confirmación al usuario, pero el mensaje fue recibido');
+      // No retornamos error aquí porque el mensaje principal sí se envió al admin
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Mensaje enviado correctamente'
+    });
+
+  } catch (error) {
+    console.error('Error enviando mensaje de contacto:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al enviar el mensaje. Por favor, intenta nuevamente.'
+    });
+  }
+});
 
 module.exports = router;
