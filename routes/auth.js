@@ -197,6 +197,7 @@ router.post("/confirmar/", async (req, res) => {
   }
 });
 
+//ingresando (conociendo) la contraseña actual para luego poner la nueva
 router.post("/cambiar-password", [validaToken], async (req, res) => {
   // Obtener datos del cuerpo de la solicitud
   const { contrasenaActual, nuevaContrasena, nuevaContrasena2 } = req.body;
@@ -242,34 +243,27 @@ router.post("/cambiar-password", [validaToken], async (req, res) => {
   }
 });
 
+//para el que se la olvido y se envio el link por mail
 router.post("/restablecer-password", async (req, res) => {
-  // Obtener datos del cuerpo de la solicitud
   const { mail, nuevaContrasena, nuevaContrasena2 } = req.body;
 
-  // Lógica para cambiar la contraseña
   try {
-    // Buscar el usuario en la base de datos
     const usuarioDB = await usuarios.findOne({ email: mail });
 
-    // Verificar si el usuario existe
     if (!usuarioDB) {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    // Verificar que las nuevas contraseñas sean iguales
     if (nuevaContrasena !== nuevaContrasena2) {
       return res.status(401).json({ error: "Contraseñas nuevas diferentes" });
     }
 
-    // Generar el hash de la nueva contraseña
     const saltos = await bcrypt.genSalt(10);
     const nuevaContrasenaHash = await bcrypt.hash(nuevaContrasena, saltos);
 
-    // Actualizar la contraseña en la base de datos
     usuarioDB.password = nuevaContrasenaHash;
     await usuarioDB.save();
 
-    // Nombre de usuario obtenido de la base de datos
     const nombreUsuario = usuarioDB.name;
 
     res.json({
@@ -298,6 +292,7 @@ const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// inicia el proceso de recuperacion de contraseña olvidada
 router.post("/olvido-password", passwordResetLimiter, async (req, res) => {
   const { email } = req.body;
 

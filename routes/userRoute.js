@@ -228,7 +228,6 @@ router.get('/estadisticas-series/:idUsuario', async (req, res) => {
   }
 });
 
-
 //----------------------------------------------------------------
 
 // stadisticas personales del usuario
