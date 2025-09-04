@@ -50,42 +50,46 @@ const schemaLogin = Joi.object({
 });
 
 router.post("/login", async (req, res) => {
-  // validaciones
-  const { error } = schemaLogin.validate(req.body);
-  if (error) return res.status(400).json({ error: error.details[0].message });
+  const { email, password, rememberMe } = req.body;
 
-  // Convertir el texto del usuario a minúsculas
-  const usuarioInput = req.body.email.toLowerCase();
-
-  const user = await User.findOne({ email: usuarioInput });
+  const user = await User.findOne({ email: email.toLowerCase() });
   if (!user) return res.status(400).json({ error: "Usuario no registrado" });
 
-  // Verificar si la cuenta está activada
-  if (!user.verificado) {
-    return res.status(400).json({ error: "La cuenta no está activada" });
-  }
-
-  const validPassword = await bcrypt.compare(req.body.password, user.password);
+  const validPassword = await bcrypt.compare(password, user.password);
   if (!validPassword)
-    return res.status(400).json({ error: "Credenciales invalidas" });
+    return res.status(400).json({ error: "Credenciales inválidas" });
 
-  // Nota: En los mensajes del mail y contraseñas incorrectos, poner credenciales invalidas. Es para no darle pistas al usuario en que se esta equivocando
+  // generar tokens
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user, rememberMe);
 
-  // Creacion del token
-  const token = jwt.sign(
-    {
-      name: user.name,
-      id: user._id,
-    },
-    process.env.TOKEN_SECRET
-  );
+  // guardar refresh token en cookie httpOnly
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // true en prod con HTTPS
+    sameSite: "strict",
+    maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, 
+  });
 
-  res.header("auth-token", token).json({
+  res.json({
     error: null,
-    data: { token },
+    data: { token: accessToken },
     name: user.name,
   });
 });
+
+router.post("/refresh-token", (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) return res.status(401).json({ error: "No hay refresh token" });
+
+  jwt.verify(refreshToken, process.env.REFRESH_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Refresh token inválido o expirado" });
+
+    const newAccessToken = generateAccessToken({ _id: user.id, name: user.name });
+    res.json({ token: newAccessToken });
+  });
+});
+
 
 router.post("/register", async (req, res) => {
   // Validaciones de Usuarios
@@ -168,8 +172,7 @@ router.post("/register", async (req, res) => {
 router.post("/confirmar/", async (req, res) => {
   try {
     const { mail, token } = req.body;
-    console.log(mail, token);
-    // Buscar usuario por email
+
     const usuario = await User.findOne({ email: mail });
     if (!usuario) {
       return res
@@ -177,12 +180,10 @@ router.post("/confirmar/", async (req, res) => {
         .json({ error: true, mensaje: "Email no registrado" });
     }
 
-    // Verificar si el token enviado coincide con el token almacenado
     if (token !== usuario.token) {
       return res.status(401).json({ error: true, mensaje: "Token no válido" });
     }
 
-    // Modificar el estado del campo verificado a true
     usuario.verificado = true;
     await usuario.save();
 
@@ -316,12 +317,22 @@ router.post("/olvido-password", async (req, res) => {
   }
 });
 
-function generarToken() {
-  return (
-    Math.random().toString(36).substring(2, 15) +
-    Math.random().toString(36).substring(2, 15)
+// función para generar tokens
+const generateAccessToken = (user) => {
+  return jwt.sign(
+    { id: user._id, name: user.name },
+    process.env.TOKEN_SECRET,
+    { expiresIn: "15m" } // corto
   );
-}
+};
+
+const generateRefreshToken = (user, rememberMe) => {
+  return jwt.sign(
+    { id: user._id },
+    process.env.REFRESH_SECRET,
+    { expiresIn: rememberMe ? "30d" : "1d" } // largo si marcó "recordarme"
+  );
+};
 
 router.get("/ping", (req, res) => {
   res.status(200).json({ mensaje: "ok" });
