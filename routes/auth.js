@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const usuarios = require("../models/Users");
 const validaToken = require("./validate-token");
 const enviarEmail = require("./mails");
+const rateLimit = require("express-rate-limit");
 
 const customMessages = {
   "string.base": "{{#label}} debe ser una cadena",
@@ -243,7 +244,7 @@ router.post("/cambiar-password", [validaToken], async (req, res) => {
 
 router.post("/restablecer-password", async (req, res) => {
   // Obtener datos del cuerpo de la solicitud
-  const { mail, token, nuevaContrasena, nuevaContrasena2 } = req.body;
+  const { mail, nuevaContrasena, nuevaContrasena2 } = req.body;
 
   // Lógica para cambiar la contraseña
   try {
@@ -281,41 +282,80 @@ router.post("/restablecer-password", async (req, res) => {
   }
 });
 
-router.post("/olvido-password", async (req, res) => {
+// Configuración del rate limiting para olvido de contraseña
+const passwordResetLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutos
+  max: 1, // máximo 1 solicitud por ventana de tiempo
+  message: {
+    error: "Debes esperar 5 minutos antes de solicitar otro restablecimiento"
+  },
+  handler: (req, res) => {
+    res.status(429).json({
+      error: "Demasiadas solicitudes. Intenta nuevamente en 5 minutos"
+    });
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post("/olvido-password", passwordResetLimiter, async (req, res) => {
   const { email } = req.body;
 
   try {
     // Busca al usuario por su correo electrónico en la base de datos
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    
+    // Por seguridad, siempre devolvemos el mismo mensaje aunque el email no exista
     if (!user) {
-      return res.status(404).json({ error: "Usuario no encontrado" });
+      return res.status(200).json({ 
+        message: "Si el email existe, se ha enviado un enlace de restablecimiento" 
+      });
+    }
+
+    // Verificar si ya hay un token reciente (menos de 5 minutos)
+    if (user.tokenCreatedAt && Date.now() - user.tokenCreatedAt.getTime() < 5 * 60 * 1000) {
+      return res.status(200).json({ 
+        message: "Si el email existe, se ha enviado un enlace de restablecimiento" 
+      });
     }
 
     // Generar un token para restablecer la contraseña
-    const token = generarToken();
+    const token = generateResetToken(user);
 
-    // Guardar el token en la base de datos
+    // Guardar el token y timestamp en la base de datos
     user.token = token;
+    user.tokenCreatedAt = new Date(); // Guardamos la fecha/hora actual
     await user.save();
 
     const url = process.env.URLUSER;
-    const destinatario = user.email; // Usar el email del usuario
+    const destinatario = user.email;
     const asunto = "Restablecer contraseña";
-    const texto = `Hola ${user.name}. Haz clic en el siguiente enlace para restablecer tu contraseña: ${url}/restablecer/${destinatario}/${token}`;
-    const cuerpo = texto;
+    const texto = `Hola ${user.name}.\n\nHaz clic en el siguiente enlace para restablecer tu contraseña: ${url}/nuevo-password/${encodeURIComponent(destinatario)}/${token}\n\nEste enlace expirará en 1 hora.\n\nSi no solicitaste este restablecimiento, ignora este mensaje.`;
 
-    enviarEmail(destinatario, asunto, cuerpo);
+    enviarEmail(destinatario, asunto, texto);
 
-    res
-      .status(200)
-      .json({ message: "Correo de restablecimiento enviado correctamente" });
+    res.status(200).json({ 
+      message: "Si el email existe, se ha enviado un enlace de restablecimiento" 
+    });
   } catch (error) {
     console.error("Error al procesar la solicitud de restablecimiento:", error);
-    res
-      .status(500)
-      .json({ error: "Error al procesar la solicitud de restablecimiento" });
+    res.status(500).json({ 
+      error: "Error al procesar la solicitud de restablecimiento" 
+    });
   }
 });
+
+const generateResetToken = (user) => {
+  return jwt.sign(
+    { 
+      id: user._id, 
+      purpose: 'password_reset',
+      timestamp: Date.now() // Agregamos timestamp para mayor seguridad
+    },
+    process.env.TOKEN_SECRET,
+    { expiresIn: "1h" } // Token de 1 hora para reset de password
+  );
+};
 
 // función para generar tokens
 const generateAccessToken = (user) => {
