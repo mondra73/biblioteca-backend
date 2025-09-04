@@ -120,7 +120,7 @@ router.post("/register", async (req, res) => {
 
     const userDB = await user.save();
 
-    // Creacion del token
+    // Creacion del token (solo para verificación de email)
     const token = jwt.sign(
       {
         name: user.name,
@@ -130,11 +130,11 @@ router.post("/register", async (req, res) => {
       { expiresIn: "30m" }
     );
 
-    // Actualizar el usuario con el token generado
+    // Actualizar el usuario con el token generado (solo para verificación)
     userDB.token = token;
     await userDB.save();
 
-    // Preparar datos para el email ANTES de enviar la respuesta
+    // Preparar datos para el email
     const url = process.env.URLUSER;
     const destinatario = req.body.email;
     const asunto = "Validar cuenta.";
@@ -145,27 +145,32 @@ router.post("/register", async (req, res) => {
     const asuntoMio = "¡Usuario Nuevo!";
     const textoMio = `Felicitaciones bebé, tenés un nuevo usuario en la página. Se llama: ${req.body.name}. Y su correo es: ${destinatario}`;
 
-    // Enviar respuesta PRIMERO
-    res.json({ error: null, data: userDB });
+    // Enviar respuesta SIN el token - solo información básica
+    res.json({ 
+      error: null, 
+      data: {
+        message: "Usuario registrado exitosamente. Revisa tu email para confirmar tu cuenta.",
+        user: {
+          id: userDB._id,
+          name: userDB.name,
+          email: userDB.email
+          // NO incluir el token aquí
+        }
+      }
+    });
 
     // Luego enviar los emails (después de la respuesta)
     try {
-      // Enviar email al usuario (con HTML)
       await enviarEmail(destinatario, asunto, htmlContent, true);
-      
-      // Email para ti
       await enviarEmail(miEmail, asuntoMio, textoMio);
-      
       console.log("Emails enviados exitosamente");
     } catch (emailError) {
       console.error("Error al enviar emails:", emailError);
-      // No hacemos res.json() aquí porque ya se envió la respuesta
     }
 
   } catch (error) {
     console.error("Error en registro:", error);
     
-    // Verificar si los headers ya fueron enviados
     if (res.headersSent) {
       console.log("Headers ya enviados, no se puede enviar error response");
       return;
