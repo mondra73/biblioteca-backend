@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const usuarios = require("../models/Users");
 const validaToken = require("./validate-token");
 const enviarEmail = require("./mails");
+const generarEmailBienvenida = require('../email-template/bienvenido');
 const rateLimit = require("express-rate-limit");
 
 const customMessages = {
@@ -91,7 +92,6 @@ router.post("/refresh-token", (req, res) => {
   });
 });
 
-
 router.post("/register", async (req, res) => {
   // Validaciones de Usuarios
   const { error } = schemaRegister.validate(req.body);
@@ -101,15 +101,16 @@ router.post("/register", async (req, res) => {
   }
 
   const existeElEmail = await User.findOne({ email: req.body.email });
-  if (existeElEmail)
+  if (existeElEmail) {
     return res.status(400).json({ error: "Email ya registrado" });
+  }
 
   try {
     // Encriptar la contraseña
     const saltos = await bcrypt.genSalt(10);
     const password = await bcrypt.hash(req.body.password1, saltos);
 
-    // Crear un nuevo usuario con el correo electrónico y la contraseña
+    // Crear un nuevo usuario
     const user = new User({
       name: req.body.name,
       email: req.body.email,
@@ -132,34 +133,43 @@ router.post("/register", async (req, res) => {
     userDB.token = token;
     await userDB.save();
 
-    res.json({ error: null, data: userDB });
-
-    // Una vez registrado, se envia el  mail con el token con 30 minutos de lifeTime
-
+    // Preparar datos para el email ANTES de enviar la respuesta
     const url = process.env.URLUSER;
     const destinatario = req.body.email;
     const asunto = "Validar cuenta.";
-    const texto =
-      "Hola " +
-      req.body.name +
-      ". Haz click en el siguiente enlace para activar tu cuenta: " +
-      url +
-      "/confirmar/";
-    const cuerpo = texto + destinatario + "/" + token;
-
-    enviarEmail(destinatario, asunto, cuerpo);
+    const urlConfirmacion = `${url}/confirmar/${destinatario}/${token}`;
+    const htmlContent = generarEmailBienvenida(req.body.name, urlConfirmacion);
 
     const miEmail = "mondra73@gmail.com";
     const asuntoMio = "¡Usuario Nuevo!";
-    const textoMio =
-      "Felicitaciones bebé, tenés un nuevo usuario en la página. Se llama: " +
-      req.body.name +
-      ". Y su correo es: " +
-      destinatario;
+    const textoMio = `Felicitaciones bebé, tenés un nuevo usuario en la página. Se llama: ${req.body.name}. Y su correo es: ${destinatario}`;
 
-    enviarEmail(miEmail, asuntoMio, textoMio);
+    // Enviar respuesta PRIMERO
+    res.json({ error: null, data: userDB });
+
+    // Luego enviar los emails (después de la respuesta)
+    try {
+      // Enviar email al usuario (con HTML)
+      await enviarEmail(destinatario, asunto, htmlContent, true);
+      
+      // Email para ti
+      await enviarEmail(miEmail, asuntoMio, textoMio);
+      
+      console.log("Emails enviados exitosamente");
+    } catch (emailError) {
+      console.error("Error al enviar emails:", emailError);
+      // No hacemos res.json() aquí porque ya se envió la respuesta
+    }
+
   } catch (error) {
-    // Manejo personalizado de errores de base de datos
+    console.error("Error en registro:", error);
+    
+    // Verificar si los headers ya fueron enviados
+    if (res.headersSent) {
+      console.log("Headers ya enviados, no se puede enviar error response");
+      return;
+    }
+    
     let mensajeError;
     if (error.code === 11000) {
       mensajeError = "El email ya está registrado";
