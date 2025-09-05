@@ -4,6 +4,9 @@ const bodyparser = require('body-parser');
 require('dotenv').config();
 const app = express();
 
+// Importar passport
+const passport = require('./passport');
+
 // cors
 const cors = require('cors');
 app.use(cors({
@@ -19,6 +22,9 @@ app.use(cors({
 // capturar body
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(bodyparser.json());
+
+// Inicializar passport
+app.use(passport.initialize());
 
 // Conexión a Base de datos - VERSIÓN SIMPLIFICADA
 const uri = process.env.MONGODB_URI;
@@ -41,13 +47,13 @@ const rutasPendientes = require('./routes/pendientesRoute');
 const rutasUser = require('./routes/userRoute');
 
 // route middlewares
-app.use('/api/user', authRoutes);
+app.use('/auth', authRoutes); 
+app.use('/api/user', validaToken, rutasUser);
 app.use('/api/admin', validaToken, admin);
 app.use('/api/admin/user', validaToken, rutasLibros);
 app.use('/api/admin/user', validaToken, rutasSeries);
 app.use('/api/admin/user', validaToken, rutasPeliculas);
 app.use('/api/admin/user', validaToken, rutasPendientes);
-app.use('/api/admin/user', validaToken, rutasUser);
 
 app.get('/', (req, res) => {
     res.json({

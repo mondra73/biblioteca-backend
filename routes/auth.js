@@ -12,6 +12,10 @@ const contactoAdminTemplate = require('../email-template/contacto-admin');
 const contactoUsuarioTemplate = require('../email-template/contacto-usuario')
 const rateLimit = require("express-rate-limit");
 
+const passport = require('../passport');
+const { OAuth2Client } = require('google-auth-library');
+
+
 const customMessages = {
   "string.base": "{{#label}} debe ser una cadena",
   "string.min": "{{#label}} debe tener al menos {#limit} caracteres",
@@ -54,11 +58,148 @@ const schemaLogin = Joi.object({
   password: Joi.string().min(6).max(1024).required().messages(customMessages),
 });
 
+//----------- Google ------------------
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Rutas de Google OAuth
+router.get('/google',
+    passport.authenticate('google', { 
+        scope: ['profile', 'email'],
+        session: false 
+    })
+);
+
+router.get('/google/callback',
+    passport.authenticate('google', { 
+        failureRedirect: process.env.FRONTEND_URL + '/login?error=auth_failed',
+        session: false 
+    }),
+    async (req, res) => {
+        try {
+            // Generar tokens para el usuario
+            const accessToken = generateAccessToken(req.user);
+            const refreshToken = generateRefreshToken(req.user, false);
+
+            // Guardar refresh token en cookie
+            res.cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "strict",
+                maxAge: 24 * 60 * 60 * 1000,
+            });
+
+            // Redirigir al frontend con el token de acceso
+            res.redirect(`${process.env.FRONTEND_URL}/auth-success?token=${accessToken}&name=${encodeURIComponent(req.user.name)}`);
+        } catch (error) {
+            console.error('Error en callback de Google:', error);
+            res.redirect(process.env.FRONTEND_URL + '/login?error=auth_failed');
+        }
+    }
+);
+
+// Ruta alternativa para mobile/SPA (usando token de Google)
+router.post('/google/token', async (req, res) => {
+    try {
+        const { googleToken } = req.body;
+        
+        if (!googleToken) {
+            return res.status(400).json({ error: "Token de Google requerido" });
+        }
+
+        // Verificar el token de Google
+        const ticket = await client.verifyIdToken({
+            idToken: googleToken,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        const { sub: googleId, email, name, picture } = payload;
+
+        // Buscar o crear usuario
+        let user = await User.findOne({ 
+            $or: [
+                { googleId },
+                { email, authProvider: 'google' }
+            ]
+        });
+
+        if (!user) {
+            // Buscar si ya existe con email normal
+            user = await User.findOne({ email });
+            
+            if (user) {
+                // Actualizar usuario existente
+                user.googleId = googleId;
+                user.authProvider = 'google';
+                user.avatar = picture;
+                user.verificado = true;
+                await user.save();
+            } else {
+                // Crear nuevo usuario
+                user = new User({
+                    googleId,
+                    name,
+                    email,
+                    avatar: picture,
+                    authProvider: 'google',
+                    verificado: true
+                });
+                await user.save();
+            }
+        }
+
+        // Generar tokens
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user, false);
+
+        // Guardar refresh token en cookie
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 24 * 60 * 60 * 1000,
+        });
+
+        res.json({
+            error: null,
+            data: { 
+                token: accessToken,
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    avatar: user.avatar
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en autenticación con Google:', error);
+        res.status(400).json({ error: "Error en autenticación con Google" });
+    }
+});
+
+//-------------------------------
+
 router.post("/login", async (req, res) => {
   const { email, password, rememberMe } = req.body;
 
   const user = await User.findOne({ email: email.toLowerCase() });
   if (!user) return res.status(400).json({ error: "Usuario no registrado" });
+
+  // Verificar si es usuario de Google
+  if (user.authProvider === 'google') {
+    return res.status(400).json({ 
+      error: "Este usuario se registró con Google. Por favor, usa el botón de Google para iniciar sesión." 
+    });
+  }
+
+  // Verificar si el usuario tiene contraseña (por si acaso)
+  if (!user.password) {
+    return res.status(400).json({ 
+      error: "Este usuario no tiene contraseña configurada. Usa el login con Google." 
+    });
+  }
 
   const validPassword = await bcrypt.compare(password, user.password);
   if (!validPassword)
@@ -71,7 +212,7 @@ router.post("/login", async (req, res) => {
   // guardar refresh token en cookie httpOnly
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // true en prod con HTTPS
+    secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, 
   });
