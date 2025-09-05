@@ -309,7 +309,7 @@ const correoEnviadoTemplate = (datos) => {
                 </div>
             </div>
 
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" class="btn">Volver al Sitio Web</a>
+            <a href="${process.env.URLUSER || 'http://localhost:3000'}" class="btn">Volver al Sitio Web</a>
         </div>
 
         <div class="footer">
@@ -320,7 +320,7 @@ const correoEnviadoTemplate = (datos) => {
             <div class="social-links">
                 <a href="mailto:javier.espinosa@live.com.ar">Email</a> |
                 <a href="tel:+542473469984">Teléfono</a> |
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}">Sitio Web</a>
+                <a href="${process.env.URLUSER || 'http://localhost:3000'}">Sitio Web</a>
             </div>
         </div>
     </div>

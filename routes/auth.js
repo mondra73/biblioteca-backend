@@ -395,8 +395,24 @@ router.get("/ping", (req, res) => {
   res.status(200).json({ mensaje: "ok" });
 });
 
+// Rate limiting para contacto (5 minutos entre envíos)
+const contactoLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutos
+  max: 1, // máximo 1 solicitud por ventana de tiempo
+  message: {
+    success: false,
+    message: "Debes esperar 5 minutos antes de enviar otro mensaje de contacto"
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Usamos IP + email para que sea por persona, no solo por IP
+    return req.ip + (req.body.email || '');
+  }
+});
+
 //  endpoint de contacto
-router.post('/contacto', async (req, res) => {
+router.post('/contacto', contactoLimiter, async (req, res) => {
   try {
     const { nombre, email, telefono, asunto, mensaje } = req.body;
 
