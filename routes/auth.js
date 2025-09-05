@@ -406,8 +406,9 @@ const contactoLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    // Usamos IP + email para que sea por persona, no solo por IP
-    return req.ip + (req.body.email || '');
+    // Usamos la función helper para IP + email
+    const ipKey = rateLimit.ipKeyGenerator(req);
+    return ipKey + (req.body.email || '');
   }
 });
 
