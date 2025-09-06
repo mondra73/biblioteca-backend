@@ -266,4 +266,4 @@ function getEmailTemplate(nombreUsuario) {
 `;
 }
 
-module.exports = getEmailTemplate;
+module.exports = { getEmailTemplate };
