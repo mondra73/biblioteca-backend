@@ -202,7 +202,7 @@ router.post('/google/firebase', async (req, res) => {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const { uid, email, name, picture } = decodedToken;
 
-    // ✅ BUSCAR usuario por email (NO crear automáticamente)
+    // ✅ BUSCAR usuario por email o googleId
     let user = await User.findOne({ 
       $or: [
         { googleId: uid },
@@ -210,28 +210,51 @@ router.post('/google/firebase', async (req, res) => {
       ]
     });
 
-    // ✅ SI NO EXISTE el usuario - Devolver error especial
+    // ✅ SI NO EXISTE el usuario - REGISTRARLO AUTOMÁTICAMENTE
     if (!user) {
-      return res.status(404).json({ 
-        error: "USER_NOT_REGISTERED",
-        message: "Usuario no registrado. Complete el registro.",
-        userData: {
+      try {
+        // Crear nuevo usuario automáticamente
+        user = new User({
           googleId: uid,
           name: name,
           email: email.toLowerCase(),
           avatar: picture,
-          authProvider: 'google'
-        }
-      });
-    }
-
-    // ✅ SI EXISTE pero no tiene googleId - Actualizar
-    if (!user.googleId) {
-      user.googleId = uid;
-      user.authProvider = 'google';
-      user.avatar = picture;
-      user.verificado = true;
-      await user.save();
+          authProvider: 'google',
+          verificado: true
+        });
+        
+        await user.save();
+        
+        // ✅ ENVIAR CORREO DE BIENVENIDA (ASÍNCRONO)
+        setTimeout(async () => {
+          try {
+            const asunto = "¡Bienvenido a Biblioteca Multimedia!";
+            const cuerpoHTML = getEmailTemplate(name);
+            
+            const resultado = await enviarEmail(email, asunto, cuerpoHTML, true);
+            if (resultado.success) {
+              console.log(`✅ Correo de bienvenida enviado a: ${email}`);
+            } else {
+              console.warn(`⚠️ Error al enviar correo a: ${email}`, resultado.message);
+            }
+          } catch (emailError) {
+            console.error(`❌ Error en envío de correo:`, emailError);
+          }
+        }, 0);
+        
+      } catch (registerError) {
+        console.error('Error al registrar usuario automáticamente:', registerError);
+        return res.status(500).json({ error: "Error al crear usuario automáticamente" });
+      }
+    } else {
+      // ✅ SI EXISTE pero no tiene googleId - Actualizar
+      if (!user.googleId) {
+        user.googleId = uid;
+        user.authProvider = 'google';
+        user.avatar = picture;
+        user.verificado = true;
+        await user.save();
+      }
     }
 
     // Generar tokens
