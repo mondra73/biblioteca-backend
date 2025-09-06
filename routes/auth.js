@@ -6,7 +6,7 @@ const jwt = require("jsonwebtoken");
 const usuarios = require("../models/Users");
 const validaToken = require("./validate-token");
 const enviarEmail = require("./mails");
-const generarEmailBienvenida = require('../email-template/bienvenido');
+const getEmailTemplate  = require("../email-template/registro-exitoso");
 const generarEmailRecuperacion = require('../email-template/recuperar-password');
 const contactoAdminTemplate = require('../email-template/contacto-admin');
 const contactoUsuarioTemplate = require('../email-template/contacto-usuario')
@@ -362,10 +362,32 @@ router.post("/register", async (req, res) => {
     const user = new User(userData);
     const userDB = await user.save();
 
+    // ✅ Enviar correo de bienvenida (no bloquear la respuesta)
+    try {
+      const asunto = "¡Bienvenido a Biblioteca Multimedia!";
+      const cuerpoHTML = getEmailTemplate(name);
+      
+      // Enviar el correo de forma asíncrona sin esperar
+      enviarEmail(email, asunto, cuerpoHTML, true)
+        .then(result => {
+          if (result.success) {
+            console.log(`Correo de bienvenida enviado a: ${email}`);
+          } else {
+            console.warn(`No se pudo enviar correo a: ${email}`, result.message);
+          }
+        })
+        .catch(error => {
+          console.error(`Error al enviar correo a: ${email}`, error);
+        });
+    } catch (emailError) {
+      console.error("Error al preparar el envío de correo:", emailError);
+      // No fallar el registro si hay error en el email
+    }
+
     res.json({ 
       error: null, 
       data: {
-        message: "Usuario registrado exitosamente.",
+        message: "Usuario registrado exitosamente. Se ha enviado un correo de bienvenida.",
         user: {
           id: userDB._id,
           name: userDB.name,
