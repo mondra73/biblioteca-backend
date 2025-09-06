@@ -327,12 +327,10 @@ router.post("/register", async (req, res) => {
 
   // ✅ Validación especial para usuarios Google
   if (authProvider === 'google') {
-    // No requerir password para usuarios Google
     if (!name || !email) {
       return res.status(400).json({ error: "Nombre y email son requeridos" });
     }
   } else {
-    // Validación normal para usuarios locales
     const { error } = schemaRegister.validate({ name, email, password1, password2 });
     if (error) return res.status(400).json({ error: error.details[0].message });
   }
@@ -353,7 +351,6 @@ router.post("/register", async (req, res) => {
     if (googleId) userData.googleId = googleId;
     if (avatar) userData.avatar = avatar;
     
-    // ✅ Solo agregar password para usuarios locales
     if (authProvider !== 'google') {
       const saltos = await bcrypt.genSalt(10);
       userData.password = await bcrypt.hash(password1, saltos);
@@ -362,32 +359,27 @@ router.post("/register", async (req, res) => {
     const user = new User(userData);
     const userDB = await user.save();
 
-    // ✅ Enviar correo de bienvenida (no bloquear la respuesta)
-    try {
-      const asunto = "¡Bienvenido a Biblioteca Multimedia!";
-      const cuerpoHTML = getEmailTemplate(name);
-      
-      // Enviar el correo de forma asíncrona sin esperar
-      enviarEmail(email, asunto, cuerpoHTML, true)
-        .then(result => {
-          if (result.success) {
-            console.log(`Correo de bienvenida enviado a: ${email}`);
-          } else {
-            console.warn(`No se pudo enviar correo a: ${email}`, result.message);
-          }
-        })
-        .catch(error => {
-          console.error(`Error al enviar correo a: ${email}`, error);
-        });
-    } catch (emailError) {
-      console.error("Error al preparar el envío de correo:", emailError);
-      // No fallar el registro si hay error en el email
-    }
+    // ✅ ENVÍO ASÍNCRONO - No esperar respuesta del email
+    setTimeout(async () => {
+      try {
+        const asunto = "¡Bienvenido a Biblioteca Multimedia!";
+        const cuerpoHTML = getEmailTemplate(name);
+        
+        const resultado = await enviarEmail(email, asunto, cuerpoHTML, true);
+        if (resultado.success) {
+          console.log(`✅ Correo enviado a: ${email}`);
+        } else {
+          console.warn(`⚠️ Error al enviar correo a: ${email}`, resultado.message);
+        }
+      } catch (emailError) {
+        console.error(`❌ Error crítico en envío de correo:`, emailError);
+      }
+    }, 0); // Ejecutar en el próximo tick del event loop
 
     res.json({ 
       error: null, 
       data: {
-        message: "Usuario registrado exitosamente. Se ha enviado un correo de bienvenida.",
+        message: "Usuario registrado exitosamente.",
         user: {
           id: userDB._id,
           name: userDB.name,
