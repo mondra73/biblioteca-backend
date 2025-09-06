@@ -48,8 +48,8 @@ const rutasUser = require('./routes/userRoute');
 
 // route middlewares
 app.use('/api/auth', authRoutes); 
-app.use('/api/user', validaToken, rutasUser);
 app.use('/api/admin', validaToken, admin);
+app.use('/api/admin/user', validaToken, rutasUser);
 app.use('/api/admin/user', validaToken, rutasLibros);
 app.use('/api/admin/user', validaToken, rutasSeries);
 app.use('/api/admin/user', validaToken, rutasPeliculas);
