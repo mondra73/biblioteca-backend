@@ -47,7 +47,7 @@ const rutasPendientes = require('./routes/pendientesRoute');
 const rutasUser = require('./routes/userRoute');
 
 // route middlewares
-app.use('/auth', authRoutes); 
+app.use('/api/auth', authRoutes); 
 app.use('/api/user', validaToken, rutasUser);
 app.use('/api/admin', validaToken, admin);
 app.use('/api/admin/user', validaToken, rutasLibros);
