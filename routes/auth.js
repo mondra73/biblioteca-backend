@@ -16,12 +16,13 @@ const admin = require('firebase-admin');
 const passport = require('../passport');
 const { OAuth2Client } = require('google-auth-library');
 
-// Configuración DIRECTA con tu JSON (elimina el require del archivo)
+// Configuración DIRECTA con tu JSON 
+// ✅ OPCIÓN RECOMENDADA - Usar variables de entorno
 const serviceAccount = {
   "type": "service_account",
   "project_id": "biblioteca-multimedia-faaae",
-  "private_key_id": "dcd7d799ee0de94cb5ef6ceea42017730349ccd9",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCxq4Z6llkaksh1\n6l9CsudjVgi312lcpyQrP7pL4GkHju+C7ZsV/dA8jWOvyZT70FkrAVNmrMNLLXdG\n0n2py24QoF1SnhTZZktKvXfudQ+dFX+Dbkl00gU7Mkz3/4YPBvyZsmWX53h+XBeu\ncUy+wXSpO9jWleihC7LuF8fTSpTlQ6+OWbMgXMy9dGFmuqFtfECS2Az1B+h5CxI6\n6TWHp9aJhnl9GqewMUCFhnli91YYgu7Gy3NLzpoUqxw692kKkMmjbCU/je0oNhX7\n5fp0c+M9xN/OxQcjynGd9uMqKBVVKlSkGc8mKSUc21PC1V/hsSO0qybfBIjy8DIi\nzLFrutyXAgMBAAECggEAKQxlkg4JgSO3j9K59pmJ7z/x3LO2opL1Ps7G9n/fFEF4\nYcoOwjp1cYADL5qFwtYku9RfFgJFTqmu/JxmLyQShmHenddrHr1NGPQEcQH3vQW6\nA74n14cscTxSXxvYt8EX/FSktz9h7ePODt4bapkcoHr0wsM4z3h5+xtgbhc1pnAl\niEACwdcswGjK6PbnQj03uYBKxr5/a8qiz7g/Xkf1jfvK3Lk+OSlwTFYhJYXy4Liq\ns7LiXjlG0wnx4gVr4I5FGSEaBlhSS8D5u4cjdINW1V3aGgN2U5q+od/bzc4wmvaJ\nPGRPNxrWRzc6y8XL1l5W/CwpRc53vZQryA76YtPWNQKBgQDoN2TxEIJswT+Pyuta\nMCpkAc5cKqQYb7vAPAyo07HIFLBPPK8hSfroL1NDQWJT2LWUpKxNB+Kqk6VrjCmd\nTX7pOUyv2Eg43gjQLi75+8qUcj8hVbg5pRvrRuZhxjEGSYkVY8ef7yRIkOw6zQw+\nbM32R61UGqAcY02LOcf0RwpXnQKBgQDD3fNhR4EPrLdr213txdZQIcEpnfqDD8JL\nubXOKsVTBj/UPHHvB+sRCNWDHYxPzLBbifJ6xiWN7WawHfR5BUT52Do8qfCbqcYd\nH/ZEzr1AnWes10f0hiDOCHAUJFoYFGknds27V9FqOlTT6UGCBxBY8dH74s3hvEe+\nlbiOWPigwwKBgQCsJLxwtCNricqbxvq3jfMu1ePrkTS6ZMITHLDpyp0FTMjyxHKz\nQ8t7qfGYbvT8YS8itPyB0jGm7/L2Ch6jXNqS/AYsaTII7hgsc8AhUxX2+8Zu6MO7\n//j1bkbE/o5DMeoscB6BIl+MZ9qnMHA+Kpx4UORd76r3wGmwpzHilXNGRQKBgQCw\nWeNrQBUtBsZzHyUYE5udtHaVwP6wCH1Y7xGJWismUKchsXan0ApO4RRUpEMUCmjz\nUmX3MvbXLdvaUG4wlJUBGzV8L0pK7XZJ/OAgHcB6L/8LuR25RRa+SwyWphBUQ/RV\nqvsbZbtQmMqNriPkLfYDD1+QGipix8IVD/sGd4cMPwKBgQCU7YNwAi9hUcPib6Dl\nwMn9BrOT/g6xZ+tUKBKsWfmiS2Hzc5xXAdF4MaPYw91qOhvmctXoTMjKgZU1U6Lu\n/HMG+1ZkqYAfdY5igq2g4uZg2ENKKqf0I81h7xcuMb9h9uqgZofsRw9OP8pu4SGL\nL8IcOkFky0m4slKxc69NS1yHug==\n-----END PRIVATE KEY-----\n",
+  "private_key_id": process.env.FIREBASE_PRIVATE_KEY_ID,
+  "private_key": process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   "client_email": "firebase-adminsdk-fbsvc@biblioteca-multimedia-faaae.iam.gserviceaccount.com",
   "client_id": "108068026293965536341",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -31,10 +32,21 @@ const serviceAccount = {
   "universe_domain": "googleapis.com"
 };
 
-// Inicializa Firebase Admin
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+// ✅ Validación para desarrollo local
+if (process.env.NODE_ENV === 'development' && !process.env.FIREBASE_PRIVATE_KEY) {
+  // Usar el JSON directo solo en desarrollo
+  serviceAccount.private_key_id = "dcd7d799ee0de94cb5ef6ceea42017730349ccd9";
+  serviceAccount.private_key = `-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCxq4Z6llkaksh1\n6l9CsudjVgi312lcpyQrP7pL4GkHju+C7ZsV/dA8jWOvyZT70FkrAVNmrMNLLXdG\n0n2py24QoF1SnhTZZktKvXfudQ+dFX+Dbkl00gU7Mkz3/4YPBvyZsmWX53h+XBeu\ncUy+wXSpO9jWleihC7LuF8fTSpTlQ6+OWbMgXMy9dGFmuqFtfECS2Az1B+h5CxI6\n6TWHp9aJhnl9GqewMUCFhnli91YYgu7Gy3NLzpoUqxw692kKkMmjbCU/je0oNhX7\n5fp0c+M9xN/OxQcjynGd9uMqKBVVKlSkGc8mKSUc21PC1V/hsSO0qybfBIjy8DIi\nzLFrutyXAgMBAAECggEAKQxlkg4JgSO3j9K59pmJ7z/x3LO2opL1Ps7G9n/fFEF4\nYcoOwjp1cYADL5qFwtYku9RfFgJFTqmu/JxmLyQShmHenddrHr1NGPQEcQH3vQW6\nA74n14cscTxSXxvYt8EX/FSktz9h7ePODt4bapkcoHr0wsM4z3h5+xtgbhc1pnAl\niEACwdcswGjK6PbnQj03uYBKxr5/a8qiz7g/Xkf1jfvK3Lk+OSlwTFYhJYXy4Liq\ns7LiXjlG0wnx4gVr4I5FGSEaBlhSS8D5u4cjdINW1V3aGgN2U5q+od/bzc4wmvaJ\nPGRPNxrWRzc6y8XL1l5W/CwpRc53vZQryA76YtPWNQKBgQDoN2TxEIJswT+Pyuta\nMCpkAc5cKqQYb7vAPAyo07HIFLBPPK8hSfroL1NDQWJT2LWUpKxNB+Kqk6VrjCmd\nTX7pOUyv2Eg43gjQLi75+8qUcj8hVbg5pRvrRuZhxjEGSYkVY8ef7yRIkOw6zQw+\nbM32R61UGqAcY02LOcf0RwpXnQKBgQDD3fNhR4EPrLdr213txdZQIcEpnfqDD8JL\nubXOKsVTBj/UPHHvB+sRCNWDHYxPzLBbifJ6xiWN7WawHfR5BUT52Do8qfCbqcYd\nH/ZEzr1AnWes10f0hiDOCHAUJFoYFGknds27V9FqOlTT6UGCBxBY8dH74s3hvEe+\nlbiOWPigwwKBgQCsJLxwtCNricqbxvq3jfMu1ePrkTS6ZMITHLDpyp0FTMjyxHKz\nQ8t7qfGYbvT8YS8itPyB0jGm7/L2Ch6jXNqS/AYsaTII7hgsc8AhUxX2+8Zu6MO7\n//j1bkbE/o5DMeoscB6BIl+MZ9qnMHA+Kpx4UORd76r3wGmwpzHilXNGRQKBgQCw\nWeNrQBUtBsZzHyUYE5udtHaVwP6wCH1Y7xGJWismUKchsXan0ApO4RRUpEMUCmjz\nUmX3MvbXLdvaUG4wlJUBGzV8L0pK7XZJ/OAgHcB6L/8LuR25RRa+SwyWphBUQ/RV\nqvsbZbtQmMqNriPkLfYDD1+QGipix8IVD/sGd4cMPwKBgQCU7YNwAi9hUcPib6Dl\nwMn9BrOT/g6xZ+tUKBKsWfmiS2Hzc5xXAdF4MaPYw91qOhvmctXoTMjKgZU1U6Lu\n/HMG+1ZkqYAfdY5igq2g4uZg2ENKKqf0I81h7xcuMb9h9uqgZofsRw9OP8pu4SGL\nL8IcOkFky0m4slKxc69NS1yHug==\n-----END PRIVATE KEY-----\n`;
+}
+
+// ✅ Inicializar solo si tenemos la private key
+if (serviceAccount.private_key) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+} else {
+  console.warn('⚠️  Firebase Admin no inicializado - Faltan variables de entorno');
+}
 
 const customMessages = {
   "string.base": "{{#label}} debe ser una cadena",
@@ -332,15 +344,18 @@ router.post("/refresh-token", (req, res) => {
 });
 
 router.post("/register", async (req, res) => {
-  // ✅ ACEPTAR DATOS DE GOOGLE
   const { name, email, password1, password2, googleId, authProvider, avatar } = req.body;
 
-  // Validaciones de Usuarios (solo si no es Google)
-  if (authProvider !== 'google') {
-    const { error } = schemaRegister.validate({ name, email, password1, password2 });
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
+  // ✅ Validación especial para usuarios Google
+  if (authProvider === 'google') {
+    // No requerir password para usuarios Google
+    if (!name || !email) {
+      return res.status(400).json({ error: "Nombre y email son requeridos" });
     }
+  } else {
+    // Validación normal para usuarios locales
+    const { error } = schemaRegister.validate({ name, email, password1, password2 });
+    if (error) return res.status(400).json({ error: error.details[0].message });
   }
 
   const existeElEmail = await User.findOne({ email: email });
@@ -349,7 +364,6 @@ router.post("/register", async (req, res) => {
   }
 
   try {
-    // ✅ CREAR USUARIO CON O SIN PASSWORD
     const userData = {
       name: name,
       email: email,
@@ -359,8 +373,9 @@ router.post("/register", async (req, res) => {
 
     if (googleId) userData.googleId = googleId;
     if (avatar) userData.avatar = avatar;
+    
+    // ✅ Solo agregar password para usuarios locales
     if (authProvider !== 'google') {
-      // Solo encriptar password para usuarios locales
       const saltos = await bcrypt.genSalt(10);
       userData.password = await bcrypt.hash(password1, saltos);
     }
@@ -368,8 +383,6 @@ router.post("/register", async (req, res) => {
     const user = new User(userData);
     const userDB = await user.save();
 
-    // ... resto del código de email ...
-    
     res.json({ 
       error: null, 
       data: {
@@ -383,7 +396,8 @@ router.post("/register", async (req, res) => {
     });
 
   } catch (error) {
-    // ... manejo de errores ...
+    console.error("Error en registro:", error);
+    res.status(400).json({ error: "Hubo un error al registrar el usuario" });
   }
 });
 
