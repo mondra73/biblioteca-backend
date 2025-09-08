@@ -14,7 +14,8 @@ app.use(cors({
     'http://localhost:5173', 
     'http://localhost:3000',
     'https://bibliotecamultimedia.onrender.com',
-    'https://biblioteca-testing.onrender.com' 
+    'https://biblioteca-testing.onrender.com' ,
+    'https://bibliotecamultimedia.com.ar'
   ],
   credentials: true
 }));
