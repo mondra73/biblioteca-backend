@@ -15,43 +15,22 @@ const admin = require('firebase-admin');
 const passport = require('../passport');
 const { OAuth2Client } = require('google-auth-library');
 
-// ✅ CONFIGURACIÓN CON VARIABLES DE ENTORNO (Para Render)
+// ✅ CONFIGURACIÓN DEFINITIVA
 try {
-  // Verificar que las variables necesarias estén presentes
-  const requiredVars = [
-    'FIREBASE_TYPE',
-    'FIREBASE_PROJECT_ID',
-    'FIREBASE_PRIVATE_KEY',
-    'FIREBASE_CLIENT_EMAIL'
-  ];
-  
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    console.warn('⚠️ Variables de Firebase faltantes:', missingVars);
-    console.log('⚠️ El login con Google no funcionará hasta resolver esto');
+  if (process.env.FIREBASE_CONFIG_BASE64) {
+    // Para Render (Base64)
+    const firebaseConfigJson = Buffer.from(process.env.FIREBASE_CONFIG_BASE64, 'base64').toString('utf-8');
+    const firebaseConfig = JSON.parse(firebaseConfigJson);
+    admin.initializeApp({ credential: admin.credential.cert(firebaseConfig) });
+    console.log('✅ Firebase Admin inicializado desde Base64');
   } else {
-    const firebaseConfig = {
-      type: process.env.FIREBASE_TYPE,
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // Manejar saltos de línea
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: process.env.FIREBASE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth',
-      token_uri: process.env.FIREBASE_TOKEN_URI || 'https://oauth2.googleapis.com/token',
-      auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL || 'https://www.googleapis.com/oauth2/v1/certs',
-      client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
-      universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN || 'googleapis.com'
-    };
-
-    admin.initializeApp({
-      credential: admin.credential.cert(firebaseConfig)
-    });
-    console.log('✅ Firebase Admin inicializado correctamente desde variables de entorno');
+    // Para desarrollo local (archivo JSON)
+    const serviceAccount = require('../config/firebase-service-key.json');
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    console.log('✅ Firebase Admin inicializado desde archivo JSON');
   }
 } catch (error) {
-  console.warn('⚠️ No se pudo inicializar Firebase Admin:', error.message);
+  console.warn('⚠️ Error inicializando Firebase:', error.message);
   console.log('⚠️ El login con Google no funcionará hasta resolver esto');
 }
 
