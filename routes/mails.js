@@ -16,7 +16,6 @@ async function enviarEmail(destinatario, asunto, cuerpo, esHTML = false) {
       subject: asunto,
     };
 
-    // Si es HTML, usar html, sino text
     if (esHTML) {
       mailOptions.html = cuerpo;
     } else {

@@ -21,14 +21,13 @@ const userSchema = mongoose.Schema({
     password: {
         type: String,
         minlength: 6,
-        // Hacemos que no sea required para usuarios de Google
         required: function() {
-            return !this.googleId; // Solo requerido si no es usuario de Google
+            return !this.googleId; 
         }
     },
     googleId: {
         type: String,
-        sparse: true // Permite valores null pero mantiene unicidad
+        sparse: true 
     },
     avatar: {
         type: String
@@ -49,14 +48,13 @@ const userSchema = mongoose.Schema({
     verificado: {
         type: Boolean,
         default: function() {
-            return this.authProvider === 'google'; // Usuarios de Google vienen verificados
+            return this.authProvider === 'google'; 
         }
     },
     token: String,
     tokenCreatedAt: Date 
 });
 
-// Índice compuesto para evitar duplicados
 userSchema.index({ googleId: 1 }, { sparse: true, unique: true });
 
 module.exports = mongoose.model('User', userSchema);

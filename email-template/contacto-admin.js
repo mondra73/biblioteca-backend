@@ -8,11 +8,9 @@ const contactoUsuarioTemplate = (datos) => {
     fechaEnvio
   } = datos;
 
-  // Determinar prioridad basada en el asunto
   const asuntosUrgentes = ['soporte-tecnico', 'problema-cuenta'];
   const prioridad = asuntosUrgentes.includes(asunto) ? 'URGENTE' : 'NORMAL';
   
-  // Mapear asuntos a nombres legibles
   const asuntosMap = {
     'consulta-general': 'Consulta general',
     'soporte-tecnico': 'Soporte técnico',

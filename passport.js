@@ -8,18 +8,15 @@ passport.use(new GoogleStrategy({
     callbackURL: process.env.BACKEND_URL + "/auth/google/callback"
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        // Buscar usuario existente por googleId
         let user = await User.findOne({ googleId: profile.id });
         
         if (user) {
             return done(null, user);
         }
 
-        // Buscar por email (por si el usuario ya se registró con email normal)
         user = await User.findOne({ email: profile.emails[0].value });
         
         if (user) {
-            // Si existe pero no tiene googleId, actualizamos
             user.googleId = profile.id;
             user.authProvider = 'google';
             user.avatar = profile.photos[0].value;
@@ -28,7 +25,6 @@ passport.use(new GoogleStrategy({
             return done(null, user);
         }
 
-        // Crear nuevo usuario
         const newUser = new User({
             googleId: profile.id,
             name: profile.displayName,

@@ -1,4 +1,3 @@
-// registro-exitoso.js
 function getEmailTemplate(nombreUsuario) {
   return `
 <!DOCTYPE html>

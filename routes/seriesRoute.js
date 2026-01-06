@@ -34,9 +34,8 @@ router.get("/series", async (req, res) => {
       });
     }
 
-    // Normalizar fechas y seleccionar solo los campos necesarios de cada libro
     const seriesNormalizados = usuario.series.map((serie) => ({
-      id: serie._id || serie.id, // dependiendo de cómo lo tengas en tu schema
+      id: serie._id || serie.id,
       titulo: serie.titulo,
       fecha: serie.fecha ? new Date(serie.fecha) : new Date(0),
       director: serie.director,
@@ -44,27 +43,21 @@ router.get("/series", async (req, res) => {
       valuacion: serie.valuacion
     }));
 
-    // Ordenar las películas por fecha (más reciente primero)
     const seriesOrdenadas = seriesNormalizados.sort(
       (a, b) => b.fecha - a.fecha
     );
 
-    // Obtener el total de películas del usuario
     const totalSeries = seriesOrdenadas.length;
 
-    // Calcular el índice de inicio para la paginación
     const startIndex = (page - 1) * PAGE_SIZE;
 
-    // Aplicar paginación
     const seriesPaginadas = seriesOrdenadas.slice(
       startIndex,
       startIndex + PAGE_SIZE
     );
 
-    // Calcular el número total de páginas
     const totalPages = Math.ceil(totalSeries / PAGE_SIZE);
 
-    // Responder con los datos paginados
     res.status(200).json({
       series: seriesPaginadas,
       totalPages,
@@ -85,7 +78,6 @@ router.get("/serie/:serieId", async (req, res) => {
   const { fecha, titulo, director, descripcion } = req.body;
 
   try {
-    // Verificar si el usuario existe
     const user = await usuarios.findOne({ _id: userId });
     if (!user) {
       return res.status(404).json({ message: "Usuario no encontrado" });
@@ -97,7 +89,6 @@ router.get("/serie/:serieId", async (req, res) => {
         .status(404)
         .json({ error: true, mensaje: "Serie no encontrada" });
     }
-    // Devolver la pelicula encontrado en la respuesta
     res.json(serie);
   } catch (error) {
     console.error(error);
@@ -109,16 +100,14 @@ router.get("/serie/buscar/:texto", async (req, res) => {
   const PAGE_SIZE = 20;
   const userId = req.user.id;
   const texto = req.params.texto.toLowerCase().replace(/_/g, " ");
-  const page = parseInt(req.query.page) || 1; // Obtenemos el número de página
+  const page = parseInt(req.query.page) || 1; 
 
   try {
-    // Verificar si el usuario existe
     const user = await usuarios.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    // Buscar libros que coincidan con el texto
     const seriesEncontradas = user.series.filter((serie) => {
       return (
         serie.titulo.toLowerCase().includes(texto) ||
@@ -133,8 +122,6 @@ router.get("/serie/buscar/:texto", async (req, res) => {
         mensaje: "No se encontraron libros que coincidan con la búsqueda",
       });
     }
-
-    // Normalizar fechas como en el otro endpoint
     const seriesNormalizadas = seriesEncontradas.map((serie) => ({
       id: serie._id || serie.id,
       fecha: serie.fecha ? new Date(serie.fecha) : new Date(0),
@@ -144,12 +131,10 @@ router.get("/serie/buscar/:texto", async (req, res) => {
       valuacion: serie.valuacion,
     }));
 
-    // Ordenar por fecha (más reciente primero)
     const seriesOrdenadas = seriesNormalizadas.sort(
       (a, b) => b.fecha - a.fecha
     );
 
-    // Aplicar paginación
     const startIndex = (page - 1) * PAGE_SIZE;
     const seriesPaginadas = seriesOrdenadas.slice(
       startIndex,
@@ -158,13 +143,12 @@ router.get("/serie/buscar/:texto", async (req, res) => {
     const totalSeries = seriesOrdenadas.length;
     const totalPages = Math.ceil(totalSeries / PAGE_SIZE);
 
-    // Responder con la estructura similar al otro endpoint
     res.status(200).json({
       series: seriesPaginadas,
       totalPages,
       currentPage: page,
       totalSeries,
-      textoBuscado: texto, // Opcional: para que el cliente sepa qué se buscó
+      textoBuscado: texto, 
     });
   } catch (error) {
     console.log(error);
@@ -174,7 +158,6 @@ router.get("/serie/buscar/:texto", async (req, res) => {
 
 router.post("/carga-series", async (req, res) => {
   try {
-    // Validar los datos del cuerpo de la solicitud
     const { error } = schemaCargaSeries.validate(req.body);
     if (error) {
       return res.status(400).json({
@@ -185,13 +168,10 @@ router.post("/carga-series", async (req, res) => {
 
     const usuarioDB = await usuarios.findOne({ _id: req.user.id });
 
-    // Obtener la fecha actual
-    const fechaActual = moment().startOf("day"); // Fecha actual sin la hora
+    const fechaActual = moment().startOf("day"); 
 
-    // Convertir la fecha de la serie a un objeto Moment
-    const fechaSerie = moment(req.body.fecha).startOf("day"); // Fecha del libro sin la hora
+    const fechaSerie = moment(req.body.fecha).startOf("day"); 
 
-    // Verificar si la fecha de la serie es posterior al día actual
     if (fechaSerie.isAfter(fechaActual)) {
       return res.status(400).json({
         error: true,
@@ -199,7 +179,6 @@ router.post("/carga-series", async (req, res) => {
       });
     }
 
-    // Crear nueva Serie
     const serie = new Serie({
       fecha: fechaSerie.toDate(),
       titulo: req.body.titulo,
@@ -208,10 +187,8 @@ router.post("/carga-series", async (req, res) => {
       valuacion: req.body.valuacion || null,
     });
 
-    // Agregar la serie al array de series del usuario
     usuarioDB.series.push(serie);
 
-    // Guardar los cambios en la base de datos
     await usuarioDB.save();
 
     res.json("200", {
@@ -231,33 +208,26 @@ router.delete("/serie/:idSerie", async (req, res) => {
     const usuarioId = req.user.id;
     const serieId = req.params.idSerie;
 
-    // Buscar al usuario por su ID
     const usuario = await usuarios.findById(usuarioId);
 
-    // Verificar si el usuario existe
     if (!usuario) {
       return res.status(404).json({ mensaje: "Usuario no encontrado" });
     }
 
-    // Buscar el índice de la sere en el array de peliculas del usuario
     const indiceSerie = usuario.series.findIndex(
       (serie) => serie._id.toString() === serieId
     );
 
-    // Verificar si e la pelicula existe en el array de peliculas del usuario
     if (indiceSerie === -1) {
       return res
         .status(404)
         .json({ mensaje: "Serie no encontrada para este usuario" });
     }
 
-    // Eliminar la serie  del array de peliculas del usuario
     usuario.series.splice(indiceSerie, 1);
 
-    // Guardar los cambios en la base de datos
     await usuario.save();
 
-    // Respuesta exitosa
     res.json({ mensaje: "Serie eliminada correctamente" });
   } catch (error) {
     console.error(error);
@@ -271,13 +241,11 @@ router.put("/serie/:serieId", async (req, res) => {
   const { fecha, titulo, director, descripcion, valuacion } = req.body;
 
   try {
-    // Verificar si el usuario existe
     const user = await usuarios.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    // Verificar si la serie existe en el array de series del usuario
     const serieIndex = user.series.findIndex(
       (serie) => serie._id.toString() === serieId
     );
@@ -285,7 +253,6 @@ router.put("/serie/:serieId", async (req, res) => {
       return res.status(404).json({ message: "serie no encontrado" });
     }
 
-    // Verificar si se proporciona el título de la serie
     if (!titulo) {
       return res
         .status(400)
@@ -294,7 +261,6 @@ router.put("/serie/:serieId", async (req, res) => {
         });
     }
 
-    // Verificar si la fecha de la serie es posterior al día actual
     if (fecha) {
       const fechaActual = moment().startOf("day");
       const fechaSerie = moment(fecha).startOf("day");
@@ -308,14 +274,12 @@ router.put("/serie/:serieId", async (req, res) => {
       }
     }
 
-    // Actualizar los datos de la serie
     if (fecha) user.series[serieIndex].fecha = fecha;
     if (titulo) user.series[serieIndex].titulo = titulo;
     if (director) user.series[serieIndex].director = director;
     if (descripcion) user.series[serieIndex].descripcion = descripcion;
     if (valuacion !== undefined) user.series[serieIndex].valuacion = valuacion;
 
-    // Guardar el usuario actualizado en la base de datos
     await user.save();
 
     res.json({ message: "Serie actualizada correctamente" });

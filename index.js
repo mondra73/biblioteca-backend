@@ -4,7 +4,6 @@ const bodyparser = require('body-parser');
 require('dotenv').config();
 const app = express();
 
-// Importar passport
 const passport = require('./passport');
 
 // cors
@@ -21,14 +20,12 @@ app.use(cors({
   credentials: true
 }));
 
-// capturar body
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(bodyparser.json());
 
 // Inicializar passport
 app.use(passport.initialize());
 
-// Conexión a Base de datos - VERSIÓN SIMPLIFICADA
 const uri = process.env.MONGODB_URI;
 
 mongoose.connect(uri, {
@@ -38,7 +35,6 @@ mongoose.connect(uri, {
 .then(() => console.log('Base de datos conectada'))
 .catch(e => console.log('Error conectando a la base de datos:', e))
 
-// import routes
 const authRoutes = require('./routes/auth');
 const validaToken = require('./routes/validate-token');
 const admin = require('./routes/admin');
@@ -48,7 +44,6 @@ const rutasPeliculas = require('./routes/peliculasRoute');
 const rutasPendientes = require('./routes/pendientesRoute');
 const rutasUser = require('./routes/userRoute');
 
-// route middlewares
 app.use('/api/auth', authRoutes); 
 app.use('/api/admin', validaToken, admin);
 app.use('/api/admin/user', validaToken, rutasUser);
@@ -64,7 +59,6 @@ app.get('/', (req, res) => {
     })
 });
 
-// iniciar server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`servidor andando en: ${PORT}`)

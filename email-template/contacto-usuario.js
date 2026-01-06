@@ -7,7 +7,6 @@ const correoEnviadoTemplate = (datos) => {
     fechaEnvio
   } = datos;
 
-  // Mapear asuntos a nombres legibles
   const asuntosMap = {
     'consulta-general': 'Consulta general',
     'soporte-tecnico': 'Soporte técnico',

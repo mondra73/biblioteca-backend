@@ -37,22 +37,17 @@ router.get("/pendientes", async (req, res) => {
       descripcion: pendiente.descripcion,
     }));
 
-    // Obtener el total de películas del usuario (sin ordenar)
     const totalPendientes = pendientesNormalizados.length;
 
-    // Calcular el índice de inicio para la paginación
     const startIndex = (page - 1) * PAGE_SIZE;
 
-    // Aplicar paginación directamente al array sin ordenar
     const pendientesPaginados = pendientesNormalizados.slice(
       startIndex,
       startIndex + PAGE_SIZE
     );
 
-    // Calcular el número total de páginas
     const totalPages = Math.ceil(totalPendientes / PAGE_SIZE);
 
-    // Responder con los datos paginados
     res.status(200).json({
       pendientes: pendientesPaginados,
       totalPages,
@@ -72,7 +67,6 @@ router.get("/pendiente/:pendienteId", async (req, res) => {
   const pendienteId = req.params.pendienteId;
 
   try {
-    // Verificar si el usuario existe
     const user = await usuarios.findOne({ _id: userId });
     if (!user) {
       return res.status(404).json({ message: "Usuario no encontrado" });
@@ -88,15 +82,13 @@ router.get("/pendiente/:pendienteId", async (req, res) => {
         .json({ error: true, mensaje: "Pendiente no encontrado" });
       }
 
-    // Devolver el pendiente encontrado en la respuesta
     res.json({
       _id: pendiente._id,
       titulo: pendiente.titulo,
-      autorDirector: pendiente.autorDirector, // Este campo es importante
+      autorDirector: pendiente.autorDirector, 
       descripcion: pendiente.descripcion,
       tipo: pendiente.tipo,
       confirma: pendiente.confirma,
-      // Remover prioridad si existe
       fecha_agregado: pendiente.fecha_agregado || new Date().toISOString(),
       genero: pendiente.genero || '',
       notas: pendiente.notas || ''
@@ -109,7 +101,6 @@ router.get("/pendiente/:pendienteId", async (req, res) => {
 
 router.post("/carga-pendientes", async (req, res) => {
   try {
-    // Validar los datos del cuerpo de la solicitud
     const { error } = schemaCargaPendientes.validate(req.body);
     if (error) {
       return res.status(400).json({
@@ -147,33 +138,26 @@ router.delete("/pendiente/:idPendiente", async (req, res) => {
     const usuarioId = req.user.id;
     const pendienteId = req.params.idPendiente;
 
-    // Buscar al usuario por su ID
     const usuario = await usuarios.findById(usuarioId);
 
-    // Verificar si el usuario existe
     if (!usuario) {
       return res.status(404).json({ mensaje: "Usuario no encontrado" });
     }
 
-    // Buscar el índice del pendiente en el array de pendientes del usuario
     const indicePendiente = usuario.pendientes.findIndex(
       (pendiente) => pendiente._id.toString() === pendienteId
     );
 
-    // Verificar si el pendiente existe en el array de pendientes del usuario
     if (indicePendiente === -1) {
       return res
         .status(404)
         .json({ mensaje: "Pendiente no encontrado para este usuario" });
     }
 
-    // Eliminar el pendiente del array de pendientes del usuario
     usuario.pendientes.splice(indicePendiente, 1);
 
-    // Guardar los cambios en la base de datos
     await usuario.save();
 
-    // Respuesta exitosa
     res.json({ mensaje: "Pendiente eliminado correctamente" });
   } catch (error) {
     console.error(error);
@@ -187,13 +171,11 @@ router.put("/pendiente/:pendienteId", async (req, res) => {
   const { titulo, autorDirector, descripcion } = req.body;
 
   try {
-    // Verificar si el usuario existe
     const user = await usuarios.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    // Verificar si el pendiente existe en el array de pendientes del usuario
     const pendienteIndex = user.pendientes.findIndex(
       (pendiente) => pendiente._id.toString() === pendienteId
     );
@@ -201,7 +183,6 @@ router.put("/pendiente/:pendienteId", async (req, res) => {
       return res.status(404).json({ message: "Pendiente no encontrado" });
     }
 
-    // Verificar si se proporciona el título del pendiente
     if (!titulo) {
       return res
         .status(400)
@@ -210,14 +191,11 @@ router.put("/pendiente/:pendienteId", async (req, res) => {
         });
     }
 
-    // Actualizar los datos del pendiente
-
     if (titulo) user.pendientes[pendienteIndex].titulo = titulo;
     if (autorDirector)
       user.pendientes[pendienteIndex].autorDirector = autorDirector;
     if (descripcion) user.pendientes[pendienteIndex].descripcion = descripcion;
 
-    // Guardar el usuario actualizado en la base de datos
     await user.save();
 
     res.json({ message: "Pendiente actualizado correctamente" });
@@ -229,16 +207,14 @@ router.put("/pendiente/:pendienteId", async (req, res) => {
 
 router.get("/pendiente/buscar/:texto", async (req, res) => {
   const userId = req.user.id;
-  const texto = req.params.texto.toLowerCase().replace(/_/g, " "); // Convertir el texto proporcionado en minúsculas y reemplazar guiones bajos por espacios;
+  const texto = req.params.texto.toLowerCase().replace(/_/g, " ");
 
   try {
-    // Verificar si el usuario existe
     const user = await usuarios.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    // Buscar el libro por su título o autor (ignorando mayúsculas y minúsculas) de manera parcial
     const pendientesEncontrados = user.pendientes.filter((pendiente) => {
       return (
         pendiente.titulo.toLowerCase().includes(texto) ||
@@ -253,7 +229,6 @@ router.get("/pendiente/buscar/:texto", async (req, res) => {
         .json({ message: "No se encontraron pendientes en el servidor" });
     }
 
-    // Si se encuentran libros, devolverlos como respuesta
     res.status(200).json(pendientesEncontrados);
   } catch (error) {
     console.log(error);
