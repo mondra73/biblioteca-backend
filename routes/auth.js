@@ -16,16 +16,22 @@ const passport = require('../passport');
 const { OAuth2Client } = require('google-auth-library');
 
 try {
-  if (process.env.FIREBASE_CONFIG_BASE64) {
-    const firebaseConfigJson = Buffer.from(process.env.FIREBASE_CONFIG_BASE64, 'base64').toString('utf-8');
-    const firebaseConfig = JSON.parse(firebaseConfigJson);
-    admin.initializeApp({ credential: admin.credential.cert(firebaseConfig) });
-    console.log('✅ Firebase Admin inicializado desde Base64');
-  } else {
-    const serviceAccount = require('../config/firebase-service-key.json');
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    console.log('✅ Firebase Admin inicializado desde archivo JSON');
+  if (!process.env.FIREBASE_CONFIG_BASE64) {
+    throw new Error('FIREBASE_CONFIG_BASE64 no está definida');
   }
+
+  const firebaseConfigJson = Buffer
+    .from(process.env.FIREBASE_CONFIG_BASE64, 'base64')
+    .toString('utf-8');
+
+  const firebaseConfig = JSON.parse(firebaseConfigJson);
+
+  admin.initializeApp({
+    credential: admin.credential.cert(firebaseConfig)
+  });
+
+  console.log('✅ Firebase Admin inicializado desde variables de entorno');
+
 } catch (error) {
   console.warn('⚠️ Error inicializando Firebase:', error.message);
   console.log('⚠️ El login con Google no funcionará hasta resolver esto');
