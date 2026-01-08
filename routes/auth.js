@@ -330,37 +330,34 @@ router.post("/refresh-token", (req, res) => {
 });
 
 router.post("/register", async (req, res) => {
-  const { name, email, password1, password2, googleId, authProvider, avatar } = req.body;
+  const { name, email, password1, password2, authProvider } = req.body;
 
-  if (authProvider === 'google') {
-    if (!name || !email) {
-      return res.status(400).json({ error: "Nombre y email son requeridos" });
-    }
-  } else {
-    const { error } = schemaRegister.validate({ name, email, password1, password2 });
-    if (error) return res.status(400).json({ error: error.details[0].message });
+  const { error } = schemaRegister.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
   }
 
-  const existeElEmail = await User.findOne({ email: email });
+  if (authProvider === 'google') {
+    return res.status(400).json({ error: "Registro Google no permitido aquí" });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  const existeElEmail = await User.findOne({ email: normalizedEmail });
   if (existeElEmail) {
     return res.status(400).json({ error: "Email ya registrado" });
   }
 
   try {
     const userData = {
-      name: name,
-      email: email,
-      authProvider: authProvider || 'local',
-      verificado: authProvider === 'google' ? true : false
+      name,
+      email: normalizedEmail,
+      authProvider: 'local',
+      verificado: false
     };
 
-    if (googleId) userData.googleId = googleId;
-    if (avatar) userData.avatar = avatar;
-    
-    if (authProvider !== 'google') {
-      const saltos = await bcrypt.genSalt(10);
-      userData.password = await bcrypt.hash(password1, saltos);
-    }
+    const saltos = await bcrypt.genSalt(10);
+    userData.password = await bcrypt.hash(password1, saltos);
 
     const user = new User(userData);
     const userDB = await user.save();
@@ -369,20 +366,14 @@ router.post("/register", async (req, res) => {
       try {
         const asunto = "¡Bienvenido a Biblioteca Multimedia!";
         const cuerpoHTML = getEmailTemplate(name);
-        
-        const resultado = await enviarEmail(email, asunto, cuerpoHTML, true);
-        if (resultado.success) {
-          console.log(`✅ Correo enviado a: ${email}`);
-        } else {
-          console.warn(`⚠️ Error al enviar correo a: ${email}`, resultado.message);
-        }
+        await enviarEmail(normalizedEmail, asunto, cuerpoHTML, true);
       } catch (emailError) {
-        console.error(`❌ Error crítico en envío de correo:`, emailError);
+        console.error("Error enviando email:", emailError);
       }
-    }, 0); 
+    }, 0);
 
-    res.json({ 
-      error: null, 
+    res.json({
+      error: null,
       data: {
         message: "Usuario registrado exitosamente.",
         user: {
@@ -395,9 +386,10 @@ router.post("/register", async (req, res) => {
 
   } catch (error) {
     console.error("Error en registro:", error);
-    res.status(400).json({ error: "Hubo un error al registrar el usuario" });
+    res.status(500).json({ error: "Hubo un error al registrar el usuario" });
   }
 });
+
 
 router.post("/confirmar/", async (req, res) => {
   try {
