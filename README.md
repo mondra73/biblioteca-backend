@@ -4,7 +4,7 @@ This project started as a real-world solution for managing personal reading hist
 
 The initial goal was to help a frequent reader keep track of books already read, replacing years of handwritten notes with notebooks and manual searches. Over time, the system evolved into a scalable, multi-user platform supporting books, movies, and TV series.
 
-The backend has been in active use for over 4 years and currently supports around 20 users, handling real data and daily usage.
+The backend system has been in use for over 4 years and currently supports multiple users who manage real data and rely on it for daily operations.
 
 ## Main features
 
